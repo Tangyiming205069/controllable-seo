@@ -40,7 +40,15 @@ def get_model(model_path, precision, device):
     for param in model.parameters():
         param.requires_grad = False
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained(model_path)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_path,
+                                                           trust_remote_code=True,
+                                                           use_fast=False,
+                                                           use_cache=True)
+    
+    tokenizer.pad_token = tokenizer.unk_token
+    tokenizer.padding_side = 'left'
+    if not tokenizer.pad_token:
+        tokenizer.pad_token = tokenizer.eos_token
 
     return model, tokenizer
 

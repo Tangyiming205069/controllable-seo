@@ -1,36 +1,8 @@
 import torch, json, random
 import torch.nn as nn
 import torch.nn.functional as F
-from experiment.process import greedy_decode, proces_headtail
+from experiment.process import greedy_decode, proces_headtail, select_topk, create_bad_words_mask, mask_logits
 from colorama import Fore, Style
-
-
-def topk_bad_mask(logits, topk, bad_words):
-    # Get the dimensions
-    batch_size, length, vocab_size = logits.shape
-    
-    # Step 1: Identify the top-k logits for each position
-    topk_indices = torch.topk(logits, topk, dim=-1).indices  # Shape: (batch_size, length, topk)
-
-    # Create a mask for the top-k indices
-    topk_mask = torch.zeros_like(logits, dtype=torch.bool)  # Shape: (batch_size, length, vocab_size)
-    topk_mask.scatter_(-1, topk_indices, True)  # Mark top-k indices as True
-
-    # Step 2: Create a mask for bad word tokens
-    bad_word_mask = torch.zeros((vocab_size,), dtype=torch.bool, device=logits.device)
-    bad_word_mask.scatter_(0, bad_words.flatten(), True)  # Mark bad word tokens as True
-
-    # Expand bad_word_mask to match logits shape
-    bad_word_mask = bad_word_mask.unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, vocab_size)
-    bad_word_mask = bad_word_mask.expand(batch_size, length, vocab_size)  # Broadcast across batch and length
-
-    # Step 3: Combine the top-k and bad word masks
-    combined_mask = topk_mask | bad_word_mask  # Logical OR to keep top-k and bad word logits
-
-    # Step 4: Apply the combined mask to logits
-    # -65504 is the minimum value for half precision floating point
-    masked_logits = logits.masked_fill(~combined_mask, -65504)  # Mask out everything else
-    return masked_logits
 
 
 def soft_forward(model, head_tokens, prompt_logits, 
@@ -94,14 +66,14 @@ def bleu_loss(decoder_outputs, target_idx, ngram_list, pad=0, weight_list=None):
     out = cost_nll
     sum_gram = 0. 
 
-    zero = torch.tensor(0.0).cuda()
+    zero = torch.tensor(0.0).to(decoder_outputs.device)
     target_expand = target_idx.view(batch_size,1,1,-1).expand(-1,-1,output_len,-1)
     out = torch.where(target_expand==pad, zero, out)
 
     for cnt, ngram in enumerate(ngram_list):
         if ngram > output_len:
             continue
-        eye_filter = torch.eye(ngram).view([1, 1, ngram, ngram]).cuda()
+        eye_filter = torch.eye(ngram).view([1, 1, ngram, ngram]).to(decoder_outputs.device)
         term = nn.functional.conv2d(out, eye_filter)/ngram
         if ngram < decoder_outputs.size()[1]:
             term = term.squeeze(1)
@@ -164,7 +136,7 @@ def print_iteration_metrics(iteration, total_loss, fluency_loss, n_gram_loss, ta
         f"{Fore.CYAN}N-gram Loss: {n_gram_loss:.4f} {Style.RESET_ALL}"
         f"{Fore.MAGENTA}Target Loss: {target_loss:.4f} {Style.RESET_ALL}"
     )
-    print(f"\n{log_message}\n", flush=True)
+    print(f"{log_message}", flush=True)
 
 
 def log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
@@ -179,8 +151,11 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
     # Generate result from model using the complete prompt
     batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=800, 
-                                  attention_mask=torch.ones_like(complete_prompt), 
-                                  pad_token_id=tokenizer.eos_token_id)
+                                  attention_mask=torch.ones_like(complete_prompt))
+
+    # index batch_result to avoid the input prompt
+
+    batch_result = batch_result[:, complete_prompt.shape[1]:]
 
     generated_texts = tokenizer.batch_decode(batch_result, skip_special_tokens=True)
 
@@ -209,48 +184,63 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
 def attack_control(model, tokenizer, system_prompt, user_msg,
                    prompt_logits, target_tokens, bad_words_tokens, 
-                   product_list, target_product, result_file,
-                   iteration, test_iter, topk, lr, loss_weights,
-                   precision, random_order, logger, device):
+                   product_list, target_product, logger, **kwargs):
 
+    device = model.device
     epsilon = nn.Parameter(torch.zeros_like(prompt_logits))
+    print('epsilon dtype:', epsilon.dtype) 
     # kaiming initialize  
     # nn.init.kaiming_normal_(epsilon)
-    optimizer = torch.optim.Adam([epsilon], lr=lr)
+    optimizer = torch.optim.Adam([epsilon], lr=kwargs['lr'])
     batch_size = prompt_logits.size(0)
 
-    for iter in range(iteration):  
-        if random_order:
+    topk_mask = None
+    bad_words_mask = create_bad_words_mask(bad_words_tokens, prompt_logits)
+    target_tokens = target_tokens.long()
+
+    for iter in range(kwargs['num_iter']):  
+        if kwargs['random_order']:
             # shuffle the product list
             random.shuffle(product_list)
 
         head_tokens, tail_tokens = proces_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device)
 
+        head_tokens = head_tokens.long()
+        tail_tokens = tail_tokens.long()
         # add learnable noise to prompt logits
         y_logits = prompt_logits + epsilon
 
         # ngram bleu loss
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{precision}")):
+        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
             n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
 
         # fluency loss
-        fluency_soft_logits = topk_bad_mask(y_logits, topk, bad_words_tokens) / 0.001
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{precision}")):
+        if topk_mask is None:
+            fluency_soft_logits = (y_logits.detach() / 0.001 - y_logits).detach() + y_logits
+        else:
+            fluency_soft_logits = mask_logits(y_logits, topk_mask, bad_words_mask) / 0.001
+
+        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
             perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens).detach()
+        
+        topk_mask = select_topk(perturbed_y_logits, kwargs['topk'])
 
-        perturbed_y_logits = topk_bad_mask(perturbed_y_logits, topk, bad_words_tokens)
+        perturbed_y_logits = mask_logits(perturbed_y_logits, topk_mask, bad_words_mask)
+
         flu_loss = fluency_loss(perturbed_y_logits, y_logits)
-
+        
         # target loss
         soft_logits = (y_logits.detach() / 0.001 - y_logits).detach() + y_logits
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{precision}")):
+        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
             target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, target_tokens)
             
         target_loss = nn.CrossEntropyLoss(reduction='none')(
             target_logits.reshape(-1, target_logits.size(-1)), 
-            target_tokens.reshape(-1)).reshape(batch_size, -1).mean(dim=-1)
+            target_tokens.view(-1))
+        target_loss = target_loss.view(batch_size, -1).mean(dim=-1)
         
         # total loss weighted sum
+        loss_weights = kwargs['loss_weights']
         total_loss = loss_weights['fluency'] * flu_loss - loss_weights['ngram'] * n_gram_loss + loss_weights['target'] * target_loss
         total_loss = total_loss.mean()
         
@@ -264,14 +254,15 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
 
         # evaluate and log into a jsonl file
-        if iter % test_iter == 0 or iter == iteration - 1:
+        if iter % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
             product_rank, batch_idx = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
-                       iter, product_list, target_product, result_file)
+                       iter, product_list, target_product, kwargs['result_file'])
             logger.log({"eval/product_ranks": product_rank,
                         "eval/batch_idx": batch_idx}, step=iter)
-        import pdb; pdb.set_trace()
+            
+        
         # add static noise and do not add either static or learnable noise at the last iteration
-        if iter < iteration - 1:
+        if iter < kwargs['num_iter'] - 1:
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()

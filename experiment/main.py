@@ -8,8 +8,8 @@ from experiment.attack import attack_control
 
 def get_args():
     argparser = argparse.ArgumentParser(description="Product Rank Optimization")
-    argparser.add_argument("--model", type=str, default="llama-3.1-8b", choices=["llama-3.1-8b"], help="The model to use.")
-    argparser.add_argument("--batch_size", type=int, default=8, help="The batch size.")
+    argparser.add_argument("--model", type=str, default="llama-2-7b", choices=["llama-3.1-8b"], help="The model to use.")
+    argparser.add_argument("--batch_size", type=int, default=4, help="The batch size.")
     argparser.add_argument("--length", type=int, default=20, help="The length of the generated text.")
     argparser.add_argument("--temperature", type=float, default=1.0, help="The temperature of the sampling.")
 
@@ -19,7 +19,7 @@ def get_args():
     argparser.add_argument("--test_iter", type=int, default=20, help="The number of test iterations.")
     argparser.add_argument("--precision", type=int, default=16, help="The precision of the model.")
     argparser.add_argument("--loss_weights", type=json.loads, 
-                           default='{"fluency": 1.0, "ngram": 1.0, "target": 1.0}', 
+                           default='{"fluency": 1.0, "ngram": 100.0, "target": 100.0}', 
                            help="Loss weights as a JSON string. Example: '{\"fluency\": 1.0, \"ngram\": 1.0, \"target\": 1.0}'")
 
 
@@ -89,28 +89,27 @@ def main():
     bad_words_tokens = process_bad_words(bad_words=BAD_WORDS, 
                                          tokenizer=tokenizer, 
                                          device=device)
-    
 
     # Attack control
+    
     attack_control(model=model, 
-                   tokenizer=tokenizer,
-                   system_prompt=SYSTEM_PROMPT[args.model.split("-")[0]],
-                   user_msg=user_msg,
-                   prompt_logits=prompt_logits,  
-                   target_tokens=target_tokens, 
-                   bad_words_tokens=bad_words_tokens, 
-                   product_list=product_list,
-                   target_product=target_product,
-                   result_file=output_file,
-                   iteration=args.num_iter, 
-                   test_iter=args.test_iter,
-                   topk=args.topk, 
-                   lr=args.lr, 
-                   loss_weights=args.loss_weights,
-                   precision=args.precision,
-                   random_order=args.random_order,
-                   logger=wandb_logger,
-                   device=device)
+                tokenizer=tokenizer,
+                system_prompt=SYSTEM_PROMPT[args.model.split("-")[0]],
+                user_msg=user_msg,
+                prompt_logits=prompt_logits,  
+                target_tokens=target_tokens, 
+                bad_words_tokens=bad_words_tokens, 
+                product_list=product_list,
+                target_product=target_product,
+                logger=wandb_logger,
+                result_file=output_file,
+                num_iter=args.num_iter, 
+                test_iter=args.test_iter,
+                topk=args.topk, 
+                lr=args.lr, 
+                precision=args.precision,
+                loss_weights=args.loss_weights,
+                random_order=args.random_order)
     
     wandb_logger.finish()
 

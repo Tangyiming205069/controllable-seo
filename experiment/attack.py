@@ -151,7 +151,8 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
     # Generate result from model using the complete prompt
     batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=800, 
-                                  attention_mask=torch.ones_like(complete_prompt))
+                                  attention_mask=torch.ones_like(complete_prompt),
+                                  pad_token_id=tokenizer.eos_token_id)
 
     # index batch_result to avoid the input prompt
 
@@ -188,9 +189,8 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
     device = model.device
     epsilon = nn.Parameter(torch.zeros_like(prompt_logits))
-    print('epsilon dtype:', epsilon.dtype) 
     # kaiming initialize  
-    # nn.init.kaiming_normal_(epsilon)
+    nn.init.kaiming_normal_(epsilon)
     optimizer = torch.optim.Adam([epsilon], lr=kwargs['lr'])
     batch_size = prompt_logits.size(0)
 
@@ -211,8 +211,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
         y_logits = prompt_logits + epsilon
 
         # ngram bleu loss
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
-            n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
+        n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
 
         # fluency loss
         if topk_mask is None:

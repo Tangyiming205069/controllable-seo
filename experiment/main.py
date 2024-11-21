@@ -8,15 +8,15 @@ from experiment.attack import attack_control
 
 def get_args():
     argparser = argparse.ArgumentParser(description="Product Rank Optimization")
-    argparser.add_argument("--model", type=str, default="llama-2-7b", choices=["llama-3.1-8b"], help="The model to use.")
+    argparser.add_argument("--model", type=str, default="llama-3.1-8b", choices=["llama-3.1-8b", "llama-2-7b"], help="The model to use.")
     argparser.add_argument("--batch_size", type=int, default=4, help="The batch size.")
     argparser.add_argument("--length", type=int, default=20, help="The length of the generated text.")
     argparser.add_argument("--temperature", type=float, default=1.0, help="The temperature of the sampling.")
 
     argparser.add_argument("--lr", type=float, default=0.001, help="The learning rate.")
     argparser.add_argument("--topk", type=int, default=10, help="The top-k value.")
-    argparser.add_argument("--num_iter", type=int, default=1, help="The number of iterations.")
-    argparser.add_argument("--test_iter", type=int, default=20, help="The number of test iterations.")
+    argparser.add_argument("--num_iter", type=int, default=1000, help="The number of iterations.")
+    argparser.add_argument("--test_iter", type=int, default=100, help="The number of test iterations.")
     argparser.add_argument("--precision", type=int, default=16, help="The precision of the model.")
     argparser.add_argument("--loss_weights", type=json.loads, 
                            default='{"fluency": 1.0, "ngram": 100.0, "target": 100.0}', 

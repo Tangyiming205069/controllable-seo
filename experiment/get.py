@@ -45,10 +45,10 @@ def get_model(model_path, precision, device):
                                                            use_fast=False,
                                                            use_cache=True)
     
-    tokenizer.pad_token = tokenizer.unk_token
-    tokenizer.padding_side = 'left'
-    if not tokenizer.pad_token:
-        tokenizer.pad_token = tokenizer.eos_token
+    # tokenizer.pad_token = tokenizer.unk_token
+    # tokenizer.padding_side = 'left'
+    # if not tokenizer.pad_token:
+    #     tokenizer.pad_token = tokenizer.eos_token
 
     return model, tokenizer
 

@@ -6,10 +6,13 @@ def init_prompt(model, tokenizer, product_list, target_product_idx, temperature,
     target_product_tokens = tokenizer(target_product_str, return_tensors="pt")["input_ids"]
     product_repeated = target_product_tokens.repeat(batch_size, 1).long().to(device)
     output = model.generate(product_repeated, max_length=prompt_length + product_repeated.shape[-1], do_sample=True, top_k=10, 
-                            attention_mask=torch.ones_like(product_repeated).to(device))
+                            attention_mask=torch.ones_like(product_repeated).to(device),
+                            pad_token_id=tokenizer.eos_token_id)
+    
     logits = model(output).logits
     prompt_logits = logits[:, -(prompt_length+1):-1, :] / temperature
-    return prompt_logits
+
+    return prompt_logits.to(torch.float32)
 
 
 def proces_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device):

@@ -1,3 +1,5 @@
 # controllable-seo
 ## Setup environment
-```conda env create -f environment.yaml -n [name]```
+```conda create -n [name] python=3.11```
+```pip install transformers wandb colorama```
+

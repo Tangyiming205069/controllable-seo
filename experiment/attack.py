@@ -1,4 +1,4 @@
-import torch, json, random
+import torch, json, random, wandb
 import torch.nn as nn
 import torch.nn.functional as F
 from experiment.process import greedy_decode, proces_headtail, select_topk, create_bad_words_mask, mask_logits
@@ -89,19 +89,20 @@ def bleu_loss(decoder_outputs, target_idx, ngram_list, pad=0, weight_list=None):
     return loss
 
 
-def add_static_noise(prompt_logits, iter, device):
-    iter_steps = [50, 200, 500, 1500]
-    noise_stds = [0.1, 0.05, 0.01, 0.001]
+def add_static_noise(prompt_logits, iter):
+    iter_steps = [0, 50, 200, 500, 1500]
+    noise_stds = [1, 0.5, 0.1, 0.05, 0.01]
 
-    def get_noise_std(iter, iter_steps, noise_stds):
+    def get_noise_std(iteration):
         for i, step in enumerate(iter_steps):
-            if iter < step:
-                return noise_stds[i]
+            if iteration < step:
+                return noise_stds[i - 1] if i > 0 else noise_stds[0]
+        return noise_stds[-1]
             
-    noise_std = get_noise_std(iter, iter_steps, noise_stds)
+    noise_std = get_noise_std(iter)
 
     noise = torch.normal(mean=0, std=noise_std, size=prompt_logits.size(),
-                        device=device, requires_grad=False)
+                        device=prompt_logits.device, requires_grad=False)
     
     return prompt_logits + noise
 
@@ -140,7 +141,7 @@ def print_iteration_metrics(iteration, total_loss, fluency_loss, n_gram_loss, ta
 
 
 def log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
-               iter, product_list, target_product, output_file):
+               iter, product_list, target_product, output_file, result_table, logger):
     
     product_names = [product['Name'] for product in product_list]
 
@@ -161,31 +162,44 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     generated_texts = tokenizer.batch_decode(batch_result, skip_special_tokens=True)
 
     product_ranks = []
-
+    current_table = wandb.Table(columns=result_table.columns, data=result_table.data)
+    
     # Log the complete prompt and the generated result in a JSON file
-    with open(output_file, "a") as f:
-        f.write(f"Evaluating at Iteration {iter}\n")
-        for i in range(len(decoded_prompt)):
-            current_ranks = rank_products(generated_texts[i], product_names)[target_product]
-            product_ranks.append(current_ranks)
-            log_entry = {
-                "attack_prompt": decoded_prompt[i],
-                "complete_prompt": tokenizer.decode(complete_prompt[i], skip_special_tokens=True),
-                "generated_result": generated_texts[i],
-                'product_rank': current_ranks
-            }
-            f.write(json.dumps(log_entry, indent=4) + "\n")
+    for i in range(len(decoded_prompt)):
+        current_ranks = rank_products(generated_texts[i], product_names)[target_product]
+        product_ranks.append(current_ranks)
+        highlighted_attack_prompt = f'<span style="color:red;">{decoded_prompt[i]}</span>'
+        current_complete_prompt = tokenizer.decode(complete_prompt[i], skip_special_tokens=True)
 
-    print(f"{Fore.RED}Evaluation results have been saved to {output_file} at iteration {iter+1}{Style.RESET_ALL}")
+        log_entry = {
+            "attack_prompt": highlighted_attack_prompt,
+            "complete_prompt": current_complete_prompt.replace(decoded_prompt[i], highlighted_attack_prompt),
+            "generated_result": generated_texts[i],
+            'product_rank': current_ranks
+        }
+        
+        current_table.add_data(iter,
+                            log_entry["attack_prompt"],
+                            log_entry["complete_prompt"],
+                            log_entry["generated_result"],
+                            log_entry["product_rank"])
 
-    # return the min product rank and the batch index of that prompt
-    return min(product_ranks), product_ranks.index(min(product_ranks))
+    logger.log({f"eval/target:{target_product}": current_table}, step=iter)
+
+    #print(f"{Fore.RED}Evaluation results have been saved to {output_file} at iteration {iter+1}{Style.RESET_ALL}")
+    print(f"{Fore.RED}Target Product: {target_product} Rank: {min(product_ranks)} (11 means not found in the generated text){Style.RESET_ALL}")
+    
+    logger.log({"eval/product_ranks": min(product_ranks),
+                "eval/batch_idx": product_ranks.index(min(product_ranks))}, step=iter)
+    
+    return current_table
     
 
 
 def attack_control(model, tokenizer, system_prompt, user_msg,
                    prompt_logits, target_tokens, bad_words_tokens, 
-                   product_list, target_product, logger, **kwargs):
+                   product_list, target_product, logger, table,
+                   **kwargs):
 
     device = model.device
     epsilon = nn.Parameter(torch.zeros_like(prompt_logits))
@@ -253,11 +267,9 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
 
         # evaluate and log into a jsonl file
-        if iter % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
-            product_rank, batch_idx = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
-                       iter, product_list, target_product, kwargs['result_file'])
-            logger.log({"eval/product_ranks": product_rank,
-                        "eval/batch_idx": batch_idx}, step=iter)
+        if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
+            table = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
+                       iter, product_list, target_product, kwargs['result_file'], table, logger)
             
         
         # add static noise and do not add either static or learnable noise at the last iteration
@@ -265,7 +277,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
-            prompt_logits = add_static_noise(prompt_logits, iter, device)
+            prompt_logits = add_static_noise(prompt_logits, iter)
         
 
     

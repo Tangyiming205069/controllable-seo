@@ -1,0 +1,43 @@
+method: 'grid'
+name: 'seo'
+metric: 
+    name: 'eval/product_rank'
+    goal: 'minimize'   
+
+parameters: 
+  model: 
+    values: ["llama-3.1-8b", "llama-2-7b"] # Choices: ["llama-3.1-8b", "llama-2-7b"]
+  batch_size: 
+    value: 4
+  length: 
+    value: 50
+  temperature: 
+    value: 1.0
+  lr: 
+    values: [0.001, 0.0001]
+  topk: 
+    value: 10
+  num_iter: 
+    value: 2
+  test_iter: 
+    value: 1
+  precision: 
+    value: 16
+  loss_weights: 
+    value: { 
+      "fluency": 0, 
+      "ngram": 0, 
+      "target": 1 
+    }
+  result_dir: 
+    value: "result"
+  catalog: 
+    value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
+  random_order: 
+    value: True 
+  target_product_idx: 
+    value: 1
+  mode: 
+    value: "self" # Choices: ["self", "transfer"]
+  user_msg_type: 
+    value: "default" # Choices: ["default", "custom"]

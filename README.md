@@ -2,7 +2,7 @@
 ## Setup environment
 ```conda create -n [name] python=3.11```
 
-```pip install transformers wandb colorama```
+```pip install transformers wandb```
 
 Make sure to modify wandb's ```ENITY``` and ```PROJECT``` to your project group
 

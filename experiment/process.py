@@ -10,12 +10,12 @@ def init_prompt(model, tokenizer, product_list, target_product_idx, temperature,
                             pad_token_id=tokenizer.eos_token_id)
     
     logits = model(output).logits
-    prompt_logits = logits[:, -(prompt_length+1):-1, :] / temperature
+    prompt_logits = logits[:, -(prompt_length+1):-1, :] #/ temperature
 
     return prompt_logits.to(torch.float32)
 
 
-def proces_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device):
+def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device):
     # since it might shuffle the product list, we need to find the index of the target product
 
     product_names = [product['Name'] for product in product_list]

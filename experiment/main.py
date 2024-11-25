@@ -1,5 +1,5 @@
 import torch, os, wandb, json, yaml
-#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from experiment.get import get_user_query, get_model, get_product_list
 from experiment.process import process_bad_words, greedy_decode, init_prompt, process_target
@@ -35,23 +35,29 @@ PROJECT = 'seo'
 #     #argparser.add_argument("--save_state", action="store_true", help="Whether to save the state of the optimization procedure. If interrupted, the experiment can be resumed.")
 #     return argparser.parse_args()
 
+def get_search_hparams(config):
+    search_hparams = []
+    for k,v in config['parameters'].items():
+        if 'values' in v:
+            search_hparams.append(k)
+    return search_hparams
 
 
-def log_init_prompt(result_dir, decoded_sentences):
-    os.makedirs(result_dir, exist_ok=True)
-    output_file = f'{result_dir}/eval.jsonl'
+def get_experiment_name(search_hparams, hparams):
+    if search_hparams:
+        return "seo" + '_'.join([f'{k}={v}' for k,v in hparams.items() if k in search_hparams])
+    return "seo"
 
-    n = 1
-    while os.path.exists(output_file):
-        output_file = f'{result_dir}/eval-v{n}.jsonl'
-        n += 1
 
-    with open(output_file, "a") as f:
-        f.write('Initial Prompts:\n')
-        for sentence in decoded_sentences:
-            f.write(json.dumps({"attack_prompt": sentence}, indent=4) + "\n")
-        
-    return output_file
+def log_init_prompt(logger, decoded_sentences):
+    init_table = wandb.Table(columns=["prompt"])
+
+
+    for sentence in decoded_sentences:
+        init_table.add_data(sentence)
+
+    logger.log({"eval/initial_prompt": init_table}, commit=False)
+
 
 def main():
     wandb_logger = wandb.init(entity=ENTITY, project=PROJECT)
@@ -59,7 +65,7 @@ def main():
     hparams = wandb.config
 
     # log all hparams
-    wandb_logger.name = 'llm-seo'
+    wandb_logger.name = get_experiment_name(search_hparams, hparams)
 
     user_msg = get_user_query(hparams.user_msg_type, hparams.catalog)
 
@@ -86,9 +92,9 @@ def main():
     
     # Print initial prompt logits
     _, decoded_init_prompt = greedy_decode(logits=prompt_logits, tokenizer=tokenizer)
-    output_file = log_init_prompt(hparams.result_dir, decoded_init_prompt)
+    log_init_prompt(wandb_logger, decoded_init_prompt)
 
-    wandb_logger.config.update({'output_file': output_file})
+    # wandb_logger.config.update({'output_file': output_file})
 
     # Process the bad words tokens
     bad_words_tokens = process_bad_words(bad_words=BAD_WORDS, 
@@ -107,7 +113,6 @@ def main():
                 product_list=product_list,
                 target_product=target_product,
                 logger=wandb_logger,
-                result_file=output_file,
                 table=wandb_table,
                 num_iter=hparams.num_iter, 
                 test_iter=hparams.test_iter,
@@ -115,7 +120,8 @@ def main():
                 lr=hparams.lr, 
                 precision=hparams.precision,
                 loss_weights=hparams.loss_weights,
-                random_order=hparams.random_order)
+                random_order=hparams.random_order, 
+                temperature=hparams.temperature)
     
     wandb_logger.finish()
 
@@ -124,7 +130,7 @@ def main():
 if __name__ == "__main__":
     with open(f'experiment/config.yaml', 'r') as f:
         sweep_config = yaml.safe_load(f)
-    
+    search_hparams = get_search_hparams(sweep_config)
     sweep_id = wandb.sweep(sweep_config, entity=ENTITY, project=PROJECT)
     wandb.agent(sweep_id, function=main, entity=ENTITY, project=PROJECT)
 

@@ -1,8 +1,9 @@
 import torch, json, random, wandb
+from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
-from experiment.process import greedy_decode, proces_headtail, select_topk, create_bad_words_mask, mask_logits
-from colorama import Fore, Style
+from experiment.process import greedy_decode, process_headtail, select_topk, create_bad_words_mask, mask_logits
+# from colorama import Fore, Style
 
 
 def soft_forward(model, head_tokens, prompt_logits, 
@@ -129,19 +130,19 @@ def rank_products(text, product_names):
     return ranks
 
 
-def print_iteration_metrics(iteration, total_loss, fluency_loss, n_gram_loss, target_loss):
-    log_message = (
-        f"{Fore.GREEN}Iteration {iteration+1}: {Style.RESET_ALL}"
-        f"{Fore.YELLOW}Total Loss: {total_loss:.4f} {Style.RESET_ALL}"
-        f"{Fore.BLUE}Fluency Loss: {fluency_loss:.4f} {Style.RESET_ALL}"
-        f"{Fore.CYAN}N-gram Loss: {n_gram_loss:.4f} {Style.RESET_ALL}"
-        f"{Fore.MAGENTA}Target Loss: {target_loss:.4f} {Style.RESET_ALL}"
-    )
-    print(f"{log_message}", flush=True)
+# def print_iteration_metrics(iteration, total_loss, fluency_loss, n_gram_loss, target_loss):
+#     log_message = (
+#         f"{Fore.GREEN}Iteration {iteration+1}: {Style.RESET_ALL}"
+#         f"{Fore.YELLOW}Total Loss: {total_loss:.4f} {Style.RESET_ALL}"
+#         f"{Fore.BLUE}Fluency Loss: {fluency_loss:.4f} {Style.RESET_ALL}"
+#         f"{Fore.CYAN}N-gram Loss: {n_gram_loss:.4f} {Style.RESET_ALL}"
+#         f"{Fore.MAGENTA}Target Loss: {target_loss:.4f} {Style.RESET_ALL}"
+#     )
+#     print(f"{log_message}", flush=True)
 
 
 def log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
-               iter, product_list, target_product, output_file, result_table, logger):
+               iter, product_list, target_product, result_table, logger):
     
     product_names = [product['Name'] for product in product_list]
 
@@ -186,13 +187,13 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
     logger.log({f"eval/target:{target_product}": current_table}, step=iter)
 
-    #print(f"{Fore.RED}Evaluation results have been saved to {output_file} at iteration {iter+1}{Style.RESET_ALL}")
-    print(f"{Fore.RED}Target Product: {target_product} Rank: {min(product_ranks)} (11 means not found in the generated text){Style.RESET_ALL}")
+    # print(f"{Fore.RED}Evaluation results have been saved to {output_file} at iteration {iter+1}{Style.RESET_ALL}")
+    # print(f"{Fore.RED}Target Product: {target_product} Rank: {min(product_ranks)} (11 means not found in the generated text){Style.RESET_ALL}")
     
-    logger.log({"eval/product_ranks": min(product_ranks),
+    logger.log({"eval/product_rank": min(product_ranks),
                 "eval/batch_idx": product_ranks.index(min(product_ranks))}, step=iter)
     
-    return current_table
+    return current_table, min(product_ranks)
     
 
 
@@ -210,74 +211,88 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
     topk_mask = None
     bad_words_mask = create_bad_words_mask(bad_words_tokens, prompt_logits)
-    target_tokens = target_tokens.long()
 
-    for iter in range(kwargs['num_iter']):  
-        if kwargs['random_order']:
-            # shuffle the product list
-            random.shuffle(product_list)
+    current_rank = None
 
-        head_tokens, tail_tokens = proces_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device)
+    with tqdm(total=kwargs['num_iter'], desc="Training", unit="iter") as pbar:
+        for iter in range(kwargs['num_iter']):  
+            if kwargs['random_order']:
+                # shuffle the product list
+                random.shuffle(product_list)
 
-        head_tokens = head_tokens.long()
-        tail_tokens = tail_tokens.long()
-        # add learnable noise to prompt logits
-        y_logits = prompt_logits + epsilon
+            head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device)
 
-        # ngram bleu loss
-        n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
+            # add learnable noise to prompt logits
+            y_logits = prompt_logits + epsilon
 
-        # fluency loss
-        if topk_mask is None:
-            fluency_soft_logits = (y_logits.detach() / 0.001 - y_logits).detach() + y_logits
-        else:
-            fluency_soft_logits = mask_logits(y_logits, topk_mask, bad_words_mask) / 0.001
+            # ngram bleu loss
+            n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
 
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
-            perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens).detach()
-        
-        topk_mask = select_topk(perturbed_y_logits, kwargs['topk'])
+            # fluency loss
+            if topk_mask is None:
+                fluency_soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
+            else:
+                fluency_soft_logits = mask_logits(y_logits, topk_mask, bad_words_mask) / kwargs['temperature']
 
-        perturbed_y_logits = mask_logits(perturbed_y_logits, topk_mask, bad_words_mask)
-
-        flu_loss = fluency_loss(perturbed_y_logits, y_logits)
-        
-        # target loss
-        soft_logits = (y_logits.detach() / 0.001 - y_logits).detach() + y_logits
-        with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
-            target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, target_tokens)
+            with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
+                perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens).detach()
             
-        target_loss = nn.CrossEntropyLoss(reduction='none')(
-            target_logits.reshape(-1, target_logits.size(-1)), 
-            target_tokens.view(-1))
-        target_loss = target_loss.view(batch_size, -1).mean(dim=-1)
-        
-        # total loss weighted sum
-        loss_weights = kwargs['loss_weights']
-        total_loss = loss_weights['fluency'] * flu_loss - loss_weights['ngram'] * n_gram_loss + loss_weights['target'] * target_loss
-        total_loss = total_loss.mean()
-        
-        # log the loss
-        print_iteration_metrics(iter, total_loss.item(), flu_loss.mean().item(), n_gram_loss.mean().item(), target_loss.mean().item())
-        logger.log({"train/loss": total_loss.item(), 
-                    "train/fluency_loss": flu_loss.mean().item(), 
-                    "train/ngram_loss": n_gram_loss.mean().item(), 
-                    "train/target_loss": target_loss.mean().item()}, 
-                    step=iter)
+            topk_mask = select_topk(perturbed_y_logits, kwargs['topk'])
 
+            perturbed_y_logits = mask_logits(perturbed_y_logits, topk_mask, bad_words_mask)
 
-        # evaluate and log into a jsonl file
-        if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
-            table = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
-                       iter, product_list, target_product, kwargs['result_file'], table, logger)
+            flu_loss = fluency_loss(perturbed_y_logits, y_logits)
             
-        
-        # add static noise and do not add either static or learnable noise at the last iteration
-        if iter < kwargs['num_iter'] - 1:
-            optimizer.zero_grad()
-            total_loss.backward()
-            optimizer.step()
-            prompt_logits = add_static_noise(prompt_logits, iter)
+            # target loss
+            soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
+            with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
+                target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, target_tokens)
+                
+            target_loss = nn.CrossEntropyLoss(reduction='none')(
+                target_logits.reshape(-1, target_logits.size(-1)), 
+                target_tokens.view(-1))
+            target_loss = target_loss.view(batch_size, -1).mean(dim=-1)
+            
+            # total loss weighted sum
+            loss_weights = kwargs['loss_weights']
+            total_loss = loss_weights['fluency'] * flu_loss - loss_weights['ngram'] * n_gram_loss + loss_weights['target'] * target_loss
+            total_loss = total_loss.mean()
+            
+            # log the loss
+            # print_iteration_metrics(iter, total_loss.item(), flu_loss.mean().item(), n_gram_loss.mean().item(), target_loss.mean().item())
+
+            pbar.set_postfix({
+                "Total Loss": f"{total_loss.item():.2f}",
+                "Fluency": f"{flu_loss.mean().item():.2f}",
+                "N-gram": f"{n_gram_loss.mean().item():.2f}",
+                "Target": f"{target_loss.mean().item():.2f}",
+                "Rank": f"{current_rank}"
+            })
+            
+
+            logger.log({"train/loss": total_loss.item(), 
+                        "train/fluency_loss": flu_loss.mean().item(), 
+                        "train/ngram_loss": n_gram_loss.mean().item(), 
+                        "train/target_loss": target_loss.mean().item()}, 
+                        step=iter)
+
+
+            # evaluate and log into a jsonl file
+            if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
+                table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
+                        iter, product_list, target_product, table, logger)
+                
+                current_rank = rank
+                tqdm.write(
+                    f"Evaluation completed at iteration {iter + 1} Rank: {current_rank}"
+                )
+            pbar.update(1)
+            # add static noise and do not add either static or learnable noise at the last iteration
+            if iter < kwargs['num_iter'] - 1:
+                optimizer.zero_grad()
+                total_loss.backward()
+                optimizer.step()
+                prompt_logits = add_static_noise(prompt_logits, iter)
         
 
     

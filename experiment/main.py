@@ -121,7 +121,9 @@ def main():
                 precision=hparams.precision,
                 loss_weights=hparams.loss_weights,
                 random_order=hparams.random_order, 
-                temperature=hparams.temperature)
+                temperature=hparams.temperature,
+                iter_steps=hparams.iter_steps,
+                noise_stds=hparams.noise_stds)
     
     wandb_logger.finish()
 

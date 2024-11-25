@@ -90,9 +90,9 @@ def bleu_loss(decoder_outputs, target_idx, ngram_list, pad=0, weight_list=None):
     return loss
 
 
-def add_static_noise(prompt_logits, iter):
-    iter_steps = [0, 50, 200, 500, 1500]
-    noise_stds = [1, 0.5, 0.1, 0.05, 0.01]
+def add_static_noise(prompt_logits, iter, iter_steps, noise_stds):
+    # iter_steps = [0, 50, 200, 500, 1500]
+    # noise_stds = [1, 0.5, 0.1, 0.05, 0.01]
 
     def get_noise_std(iteration):
         for i, step in enumerate(iter_steps):
@@ -292,7 +292,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
-                prompt_logits = add_static_noise(prompt_logits, iter)
+                prompt_logits = add_static_noise(prompt_logits, iter, kwargs['iter_steps'], kwargs['noise_stds'])
         
 
     

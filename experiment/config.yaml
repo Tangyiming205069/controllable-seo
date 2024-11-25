@@ -6,21 +6,21 @@ metric:
 
 parameters: 
   model: 
-    values: ["llama-3.1-8b", "llama-2-7b"] # Choices: ["llama-3.1-8b", "llama-2-7b"]
+    value: "llama-2-7b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
   batch_size: 
     value: 4
   length: 
-    values: [50, 30]
+    values: [30, 50, 70]
   temperature: 
     values: [1.0, 0.1, 0.01]
   lr: 
-    values: [0.001, 0.003, 0.01, 0.1]
+    values: [0.1, 0.003, 0.01]
   topk: 
     value: 10
   num_iter: 
-    value: 4
+    value: 2000
   test_iter: 
-    value: 2
+    value: 200
   precision: 
     value: 16
   loss_weights: 
@@ -29,6 +29,11 @@ parameters:
       "ngram": 0, 
       "target": 1 
     }
+
+  iter_steps:
+    value: [0, 50, 200, 500, 1500]
+  noise_stds:
+    value: [0.1, 0.05, 0.01, 0.005, 0.001]
   # result_dir: 
   #   value: "result"
   catalog: 

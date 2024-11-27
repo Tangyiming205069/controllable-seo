@@ -10,7 +10,7 @@ parameters:
   batch_size: 
     value: 4
   length: 
-    values: [30, 50, 70]
+    value: 30
   temperature: 
     values: [1.0, 0.1, 0.01]
   lr: 
@@ -39,9 +39,9 @@ parameters:
   catalog: 
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
-    value: True 
+    value: False 
   target_product_idx: 
-    value: 1
+    values: [5, 9]
   mode: 
     value: "self" # Choices: ["self", "transfer"]
   user_msg_type: 

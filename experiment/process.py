@@ -1,12 +1,15 @@
 import json, torch
 
 
-def init_prompt(model, tokenizer, product_list, target_product_idx, temperature, prompt_length, batch_size, device):
-    target_product_str = json.dumps(product_list[target_product_idx])[:-3]
+def init_prompt(model, tokenizer, product_list, helper_tokens, target_product_idx, temperature, prompt_length, batch_size, device):
+    target_product_str = json.dumps(product_list[target_product_idx])#[:-3]
     target_product_tokens = tokenizer(target_product_str, return_tensors="pt")["input_ids"]
-    product_repeated = target_product_tokens.repeat(batch_size, 1).long().to(device)
-    output = model.generate(product_repeated, max_length=prompt_length + product_repeated.shape[-1], do_sample=True, top_k=10, 
-                            attention_mask=torch.ones_like(product_repeated).to(device),
+    product_repeated = target_product_tokens.repeat(batch_size, 1).to(device)
+
+    product_helper = torch.cat([product_repeated, helper_tokens], dim=1)
+
+    output = model.generate(product_helper, max_length=prompt_length + product_helper.shape[-1], do_sample=True, top_k=10, 
+                            attention_mask=torch.ones_like(product_helper).to(device),
                             pad_token_id=tokenizer.eos_token_id)
     
     logits = model(output).logits
@@ -29,9 +32,10 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
         if i < target_product_idx:
             head += json.dumps(product) + "\n"
         elif i == target_product_idx:
-            head += json.dumps(product) + "\n"
-            tail += head[-3:]
-            head = head[:-3]
+            head += json.dumps(product) 
+            tail += "\n"
+            # tail += head[-3:]
+            # head = head[:-3]
         else:
             tail += json.dumps(product) + "\n"
     tail += "\n" + user_msg + " [/INST]"
@@ -42,7 +46,7 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
     return head_tokens, tail_tokens,
 
 
-def process_target(tokenizer, target_str, batch_size, device):
+def process_text(tokenizer, target_str, batch_size, device):
     target_tokens = tokenizer(target_str, return_tensors="pt", add_special_tokens=False)["input_ids"].repeat(batch_size, 1).to(device)
     return target_tokens
 

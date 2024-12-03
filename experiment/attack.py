@@ -7,24 +7,25 @@ from experiment.process import greedy_decode, process_headtail, select_topk, cre
 
 
 def soft_forward(model, head_tokens, prompt_logits, 
-                   tail_tokens, target_tokens=None):
+                   tail_tokens, helper_tokens, target_tokens=None):
     embedding_layer = model.get_input_embeddings()  # Usually model.embeddings or model.get_input_embeddings()
     
     # Step 2: Hard-select embeddings for head and tail
     head_embeddings =  embedding_layer(head_tokens)  # Shape: (batch_size, head_length, embedding_dim)
     tail_embeddings = embedding_layer(tail_tokens)  # Shape: (batch_size, tail_length, embedding_dim)
+    helper_embeddings = embedding_layer(helper_tokens)  # Shape: (batch_size, helper_length, embedding_dim)
 
     # Step 3: Soft-select embeddings for prompt
     prompt_probs = torch.softmax(prompt_logits, dim=-1)  # Shape: (batch_size, prompt_length, vocab_size)
     vocab_embeddings = embedding_layer.weight  # Embedding matrix (vocab_size, embedding_dim)
     prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
 
-    total = [head_embeddings, prompt_embeddings, tail_embeddings]
+    total = [head_embeddings, helper_embeddings, prompt_embeddings, tail_embeddings]
 
-    start = head_tokens.shape[1] - 1
+    start = head_tokens.shape[1] + helper_tokens.shape[1] - 1
     end = start + prompt_logits.shape[1]
 
-    # Step 4: Hard-select embeddings for target (if provided)
+    # Step 4: add target embeddings if provided
     if target_tokens is not None:
         target_embeddings = embedding_layer(target_tokens)  # Shape: (batch_size, target_length, embedding_dim)
         total.append(target_embeddings)
@@ -198,7 +199,7 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
 
 def attack_control(model, tokenizer, system_prompt, user_msg,
-                   prompt_logits, target_tokens, bad_words_tokens, 
+                   prompt_logits, target_tokens, helper_tokens, bad_words_tokens, 
                    product_list, target_product, logger, table,
                    **kwargs):
 
@@ -235,7 +236,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 fluency_soft_logits = mask_logits(y_logits, topk_mask, bad_words_mask) / kwargs['temperature']
 
             with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
-                perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens).detach()
+                perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens, helper_tokens).detach()
             
             topk_mask = select_topk(perturbed_y_logits, kwargs['topk'])
 
@@ -246,7 +247,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             # target loss
             soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
             with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
-                target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, target_tokens)
+                target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, helper_tokens, target_tokens)
                 
             target_loss = nn.CrossEntropyLoss(reduction='none')(
                 target_logits.reshape(-1, target_logits.size(-1)), 

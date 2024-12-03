@@ -2,12 +2,15 @@ import torch, os, wandb, json, yaml
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 from experiment.get import get_user_query, get_model, get_product_list
-from experiment.process import process_bad_words, greedy_decode, init_prompt, process_target
+from experiment.process import process_bad_words, greedy_decode, init_prompt, process_text
 from experiment.attack import attack_control
 
 
 ENTITY = 'fanyieee-university-of-southern-california'
 PROJECT = 'seo'
+
+HELPER_PROMPT = " Help me write a prompt that will help this product rank first."
+
 MODEL_PATH_DICT = {'llama-3.1-8b': 'meta-llama/Meta-Llama-3.1-8B-Instruct',
                    'llama-2-7b': "meta-llama/Llama-2-7b-chat-hf"}
 
@@ -95,19 +98,27 @@ def main():
     product_list, target_product, target_str = get_product_list(hparams.catalog, hparams.target_product_idx)
     print("\nTARGET STR:", target_str)
 
+    helper_tokens = process_text(tokenizer=tokenizer,
+                                    target_str=HELPER_PROMPT,
+                                    batch_size=hparams.batch_size,
+                                    device=device)
+
     prompt_logits = init_prompt(model=model, 
                                 tokenizer=tokenizer, 
                                 product_list=product_list, 
+                                helper_tokens=helper_tokens,
                                 target_product_idx=hparams.target_product_idx-1, 
                                 temperature=hparams.temperature, 
                                 prompt_length=hparams.length, 
                                 batch_size=hparams.batch_size, 
                                 device=device)
     
-    target_tokens = process_target(tokenizer=tokenizer, 
+    target_tokens = process_text(tokenizer=tokenizer, 
                                    target_str=target_str, 
                                    batch_size=hparams.batch_size, 
                                    device=device)
+    
+    
     
     # Print initial prompt logits
     _, decoded_init_prompt = greedy_decode(logits=prompt_logits, tokenizer=tokenizer)
@@ -128,6 +139,7 @@ def main():
                 user_msg=user_msg,
                 prompt_logits=prompt_logits,  
                 target_tokens=target_tokens, 
+                helper_tokens=helper_tokens,
                 bad_words_tokens=bad_words_tokens, 
                 product_list=product_list,
                 target_product=target_product,

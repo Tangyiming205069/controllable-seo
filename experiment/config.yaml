@@ -6,13 +6,13 @@ metric:
 
 parameters: 
   model: 
-    value: "llama-2-7b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
+    value: "llama-3.1-8b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
   batch_size: 
     value: 4
   length: 
     value: 30
   temperature: 
-    values: [1.0, 0.1, 0.01]
+    values: [1.0, 0.1]
   lr: 
     values: [0.1, 0.003, 0.01]
   topk: 
@@ -25,21 +25,21 @@ parameters:
     value: 16
   loss_weights: 
     value: { 
-      "fluency": 0, 
-      "ngram": 0, 
-      "target": 1 
+      "fluency": 1, 
+      "ngram": 100, 
+      "target": 100
     }
 
   iter_steps:
     value: [0, 50, 200, 500, 1500]
   noise_stds:
-    value: [0.1, 0.05, 0.01, 0.005, 0.001]
+    value: [0.1, 0.05, 0.01, 0.005, 0.001] #[1, 0.5, 0.1, 0.05, 0.01] #
   # result_dir: 
   #   value: "result"
   catalog: 
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
-    value: False 
+    value: True 
   target_product_idx: 
     values: [5, 9]
   mode: 

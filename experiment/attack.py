@@ -13,16 +13,17 @@ def soft_forward(model, head_tokens, prompt_logits,
     # Step 2: Hard-select embeddings for head and tail
     head_embeddings =  embedding_layer(head_tokens)  # Shape: (batch_size, head_length, embedding_dim)
     tail_embeddings = embedding_layer(tail_tokens)  # Shape: (batch_size, tail_length, embedding_dim)
-    helper_embeddings = embedding_layer(helper_tokens)  # Shape: (batch_size, helper_length, embedding_dim)
+    # helper_embeddings = embedding_layer(helper_tokens)  # Shape: (batch_size, helper_length, embedding_dim)
 
     # Step 3: Soft-select embeddings for prompt
     prompt_probs = torch.softmax(prompt_logits, dim=-1)  # Shape: (batch_size, prompt_length, vocab_size)
     vocab_embeddings = embedding_layer.weight  # Embedding matrix (vocab_size, embedding_dim)
     prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
 
-    total = [head_embeddings, helper_embeddings, prompt_embeddings, tail_embeddings]
+    total = [head_embeddings, prompt_embeddings, tail_embeddings]
 
-    start = head_tokens.shape[1] + helper_tokens.shape[1] - 1
+    # start = head_tokens.shape[1] + helper_tokens.shape[1] - 1
+    start = head_tokens.shape[1] - 1
     end = start + prompt_logits.shape[1]
 
     # Step 4: add target embeddings if provided
@@ -141,24 +142,58 @@ def rank_products(text, product_names):
 #     )
 #     print(f"{log_message}", flush=True)
 
+def topk_decode(model, tokenizer, y_logits, topk, temperature, head_tokens):
+    prompt_length = y_logits.shape[1]
+
+    embedding_layer = model.get_input_embeddings()
+    
+    head_embed = embedding_layer(head_tokens)
+
+    # to get past key values for efficient decoding
+    past_embed = head_embed[:, :-1, :]
+    past = model(inputs_embeds=past_embed, use_cache=True).past_key_values
+
+    input_embeds = head_embed[:, -1:, :]
+
+    for i in range(prompt_length):
+        output = model(inputs_embeds=input_embeds, past_key_values=past, use_cache=True)
+        past = output.past_key_values
+        last_logits = output.logits[:, -1:, :]
+        topk_mask = select_topk(last_logits, topk)
+        # import pdb; pdb.set_trace()
+
+        total_topk_mask = topk_mask if i == 0 else torch.cat([total_topk_mask, topk_mask], dim=1)
+
+        if i < prompt_length - 1:
+            current_y_logits = mask_logits(y_logits[:, i:i+1, :], topk_mask) / temperature
+            input_embeds = torch.matmul(F.softmax(current_y_logits, dim=-1).to(embedding_layer.weight.dtype),
+                                         embedding_layer.weight)
+
+    complete_masked_logits = mask_logits(y_logits, total_topk_mask)
+
+    decoded_tokens, decoded_text = greedy_decode(complete_masked_logits, tokenizer)
+
+    return decoded_tokens, decoded_text
+        
+
 
 def log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
-               iter, product_list, target_product, result_table, logger):
+               iter, product_list, target_product, result_table, logger, topk, temperature):
     
     product_names = [product['Name'] for product in product_list]
 
-    prompt_tokens, decoded_prompt = greedy_decode(logits, tokenizer)
+    prompt_tokens, decoded_prompt = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
 
     # Concatenate head prompt, decoded text, and tail tokens
     complete_prompt = torch.cat([head_tokens, prompt_tokens, tail_tokens], dim=1)
 
     # Generate result from model using the complete prompt
-    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=800, 
+    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=800, do_sample=True,
+                                  temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
                                   attention_mask=torch.ones_like(complete_prompt),
                                   pad_token_id=tokenizer.eos_token_id)
 
     # index batch_result to avoid the input prompt
-
     batch_result = batch_result[:, complete_prompt.shape[1]:]
 
     generated_texts = tokenizer.batch_decode(batch_result, skip_special_tokens=True)
@@ -226,9 +261,6 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             # add learnable noise to prompt logits
             y_logits = prompt_logits + epsilon
 
-            # ngram bleu loss
-            n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
-
             # fluency loss
             if topk_mask is None:
                 fluency_soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
@@ -253,6 +285,9 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 target_logits.reshape(-1, target_logits.size(-1)), 
                 target_tokens.view(-1))
             target_loss = target_loss.view(batch_size, -1).mean(dim=-1)
+
+            # ngram bleu loss
+            n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
             
             # total loss weighted sum
             loss_weights = kwargs['loss_weights']
@@ -281,13 +316,14 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             # evaluate and log into a jsonl file
             if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
                 table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
-                        iter, product_list, target_product, table, logger)
+                        iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                 
                 current_rank = rank
                 tqdm.write(
                     f"Evaluation completed at iteration {iter + 1} Rank: {current_rank}"
                 )
             pbar.update(1)
+            
             # add static noise and do not add either static or learnable noise at the last iteration
             if iter < kwargs['num_iter'] - 1:
                 optimizer.zero_grad()

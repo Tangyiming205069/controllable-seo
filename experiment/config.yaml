@@ -8,11 +8,11 @@ parameters:
   model: 
     value: "llama-3.1-8b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
   batch_size: 
-    value: 4
+    value: 2
   length: 
     value: 30
-  temperature: 
-    values: [1.0, 0.1]
+  temperature:
+    value: 0.001
   lr: 
     values: [0.1, 0.003, 0.01]
   topk: 
@@ -33,7 +33,7 @@ parameters:
   iter_steps:
     value: [0, 50, 200, 500, 1500]
   noise_stds:
-    value: [0.1, 0.05, 0.01, 0.005, 0.001] #[1, 0.5, 0.1, 0.05, 0.01] #
+    value: [1, 0.5, 0.1, 0.05, 0.01] # [0.1, 0.05, 0.01, 0.005, 0.001] 
   # result_dir: 
   #   value: "result"
   catalog: 
@@ -41,8 +41,11 @@ parameters:
   random_order: 
     value: True 
   target_product_idx: 
-    values: [5, 9]
+    value: 5
   mode: 
     value: "self" # Choices: ["self", "transfer"]
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
+
+  comment:
+    value: "with paper 1 gcp init"

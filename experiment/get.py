@@ -54,7 +54,8 @@ def get_model(model_path, precision, device):
 
 def get_product_list(catalog, target_product_idx):
     product_list = []
-    with open(f'data/{catalog}.jsonl', "r") as file:
+    # TODO
+    with open(f'data2/{catalog}.jsonl', "r") as file:
         for line in file:
             product_list.append(json.loads(line))
 

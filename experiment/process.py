@@ -3,7 +3,7 @@ import json, torch
 
 def init_prompt(model, tokenizer, product_list, helper_tokens, target_product_idx, temperature, prompt_length, batch_size, device):
     # TODO
-    target_product_str = json.dumps(product_list[target_product_idx])[:-2] + ',"Customer Review":'
+    target_product_str = json.dumps(product_list[target_product_idx])[:-3] #+ ',"Customer Review":'
     target_product_tokens = tokenizer(target_product_str, return_tensors="pt")["input_ids"]
 
 
@@ -42,17 +42,20 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
 
     # Generate the adversarial prompt
     for i, product in enumerate(product_list):
-        if i < target_product_idx:
-            head += json.dumps(product) + "\n"
-        elif i == target_product_idx:
-            head += json.dumps(product) 
-            tail += "\n"
-            tail += head[-2:]
-            head = head[:-2]
-            # TODO
-            head+= ',"Customer Review":'
-        else:
-            tail += json.dumps(product) + "\n"
+        # if i < target_product_idx:
+        #     head += json.dumps(product) + "\n"
+        # elif i == target_product_idx:
+        #     head += json.dumps(product) 
+        #     tail += "\n"
+        #     tail += head[-3:]
+        #     head = head[:-3]
+        #     # TODO
+        #     # head+= ',"Customer Review":'
+        # else:
+        #     tail += json.dumps(product) + "\n"
+
+        # TODO: put the prompt after all products
+        head += json.dumps(product) + "\n"
     tail += "\n" + user_msg + " [/INST]"
 
     head_tokens = tokenizer(head, return_tensors="pt")["input_ids"].repeat(batch_size, 1).to(device)

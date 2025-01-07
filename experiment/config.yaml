@@ -25,9 +25,9 @@ parameters:
     value: 16
   loss_weights: 
     value: { 
-      "fluency": 1, 
-      "ngram": 100, 
-      "target": 100
+      "fluency": 1, # 1
+      "ngram": 100, # 100
+      "target": 100 # 100
     }
 
   iter_steps:
@@ -39,7 +39,7 @@ parameters:
   catalog: 
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
-    value: True 
+    value: False 
   target_product_idx: 
     value: 5
   mode: 

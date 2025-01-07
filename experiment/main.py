@@ -1,5 +1,5 @@
 import torch, os, wandb, json, yaml
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from experiment.get import get_user_query, get_model, get_product_list
 from experiment.process import process_bad_words, greedy_decode, init_prompt, process_text

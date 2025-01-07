@@ -188,8 +188,8 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     complete_prompt = torch.cat([head_tokens, prompt_tokens, tail_tokens], dim=1)
 
     # Generate result from model using the complete prompt
-    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=800, do_sample=True,
-                                  temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
+    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=1000, 
+                                #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
                                   attention_mask=torch.ones_like(complete_prompt),
                                   pad_token_id=tokenizer.eos_token_id)
 

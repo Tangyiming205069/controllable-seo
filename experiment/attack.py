@@ -93,8 +93,6 @@ def bleu_loss(decoder_outputs, target_idx, ngram_list, pad=0, weight_list=None):
 
 
 def add_static_noise(prompt_logits, iter, iter_steps, noise_stds):
-    # iter_steps = [0, 50, 200, 500, 1500]
-    # noise_stds = [1, 0.5, 0.1, 0.05, 0.01]
 
     def get_noise_std(iteration):
         for i, step in enumerate(iter_steps):
@@ -104,7 +102,7 @@ def add_static_noise(prompt_logits, iter, iter_steps, noise_stds):
             
     noise_std = get_noise_std(iter)
 
-    noise = torch.normal(mean=0, std=noise_std, size=prompt_logits.size(),
+    noise = torch.normal(mean=0.0, std=noise_std, size=prompt_logits.size(),
                         device=prompt_logits.device, requires_grad=False)
     
     return prompt_logits + noise
@@ -143,6 +141,7 @@ def rank_products(text, product_names):
 #     print(f"{log_message}", flush=True)
 
 def topk_decode(model, tokenizer, y_logits, topk, temperature, head_tokens):
+    # empty cache
     prompt_length = y_logits.shape[1]
 
     embedding_layer = model.get_input_embeddings()
@@ -173,7 +172,7 @@ def topk_decode(model, tokenizer, y_logits, topk, temperature, head_tokens):
 
     decoded_tokens, decoded_text = greedy_decode(complete_masked_logits, tokenizer)
 
-    return decoded_tokens, decoded_text
+    return decoded_tokens, decoded_text, complete_masked_logits
         
 
 
@@ -182,15 +181,15 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     
     product_names = [product['Name'] for product in product_list]
 
-    prompt_tokens, decoded_prompt = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
+    prompt_tokens, decoded_prompt, _ = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
 
     # Concatenate head prompt, decoded text, and tail tokens
     complete_prompt = torch.cat([head_tokens, prompt_tokens, tail_tokens], dim=1)
 
     # Generate result from model using the complete prompt
-    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=1000, 
-                                #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
-                                  attention_mask=torch.ones_like(complete_prompt),
+    batch_result = model.generate(complete_prompt, model.generation_config, max_new_tokens=512, 
+                                  do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
+                                  attention_mask=torch.ones_like(complete_prompt), 
                                   pad_token_id=tokenizer.eos_token_id)
 
     # index batch_result to avoid the input prompt
@@ -203,8 +202,8 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     
     # Log the complete prompt and the generated result in a JSON file
     for i in range(len(decoded_prompt)):
-        current_ranks = rank_products(generated_texts[i], product_names)[target_product]
-        product_ranks.append(current_ranks)
+        current_rank = rank_products(generated_texts[i], product_names)[target_product]
+        product_ranks.append(current_rank)
         highlighted_attack_prompt = f'<span style="color:red;">{decoded_prompt[i]}</span>'
         current_complete_prompt = tokenizer.decode(complete_prompt[i], skip_special_tokens=True)
 
@@ -212,7 +211,7 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
             "attack_prompt": highlighted_attack_prompt,
             "complete_prompt": current_complete_prompt.replace(decoded_prompt[i], highlighted_attack_prompt),
             "generated_result": generated_texts[i],
-            'product_rank': current_ranks
+            'product_rank': current_rank
         }
         
         current_table.add_data(iter,
@@ -230,6 +229,92 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
                 "eval/batch_idx": product_ranks.index(min(product_ranks))}, step=iter)
     
     return current_table, min(product_ranks)
+
+
+
+def soft_log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
+               iter, product_list, target_product, result_table, logger, topk, temperature):
+    torch.cuda.empty_cache()
+    product_names = [product['Name'] for product in product_list]
+
+    _, _, masked_logits = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
+
+    embedding_layer = model.get_input_embeddings()  # Usually model.embeddings or model.get_input_embeddings()
+    
+    # Step 2: Hard-select embeddings for head and tail
+    head_embeddings =  embedding_layer(head_tokens)  # Shape: (batch_size, head_length, embedding_dim)
+    tail_embeddings = embedding_layer(tail_tokens)  # Shape: (batch_size, tail_length, embedding_dim)
+    # helper_embeddings = embedding_layer(helper_tokens)  # Shape: (batch_size, helper_length, embedding_dim)
+
+    # Step 3: Soft-select embeddings for prompt
+    prompt_probs = torch.softmax(masked_logits, dim=-1)  # Shape: (batch_size, prompt_length, vocab_size)
+    vocab_embeddings = embedding_layer.weight  # Embedding matrix (vocab_size, embedding_dim)
+
+    prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
+
+    total_embeddings = torch.cat([head_embeddings, prompt_embeddings, tail_embeddings], dim=1)
+
+    # import pdb; pdb.set_trace()
+    # batch_result = model.generate(model.generation_config, input_embeds=total_embeddings, max_new_tokens=1000,
+    #                             #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
+    #                               attention_mask=torch.ones((total_embeddings.size(0), total_embeddings.size(1))),
+    #                               pad_token_id=tokenizer.eos_token_id)
+
+    # batch_result = batch_result[:, total_embeddings.shape[1]:]
+    result = []
+    past_embed = total_embeddings[:, :-1, :]
+    past = model(inputs_embeds=past_embed, use_cache=True).past_key_values
+
+    input_embeds = total_embeddings[:, -1:, :]
+
+    for i in range(800):
+        output = model(inputs_embeds=input_embeds, past_key_values=past, use_cache=True)
+        past = output.past_key_values
+        last_logits = output.logits[:, -1:, :]
+
+        token = torch.argmax(last_logits, dim=-1)
+        result.append(token)
+        input_embeds = model.get_input_embeddings()(token)
+
+    batch_result = torch.cat(result, dim=1)
+    generated_texts = tokenizer.batch_decode(batch_result, skip_special_tokens=True)
+
+    product_ranks = []
+    current_table = wandb.Table(columns=result_table.columns, data=result_table.data)
+    
+    # Log the complete prompt and the generated result in a JSON file
+    for i in range(total_embeddings.shape[0]):
+        current_rank = rank_products(generated_texts[i], product_names)[target_product]
+        product_ranks.append(current_rank)
+        # highlighted_attack_prompt = f'<span style="color:red;">{decoded_prompt[i]}</span>'
+        # decode head and tail separately
+        current_head = tokenizer.decode(head_tokens[i], skip_special_tokens=True)
+        current_tail = tokenizer.decode(tail_tokens[i], skip_special_tokens=True)
+
+        log_entry = {
+            "attack_prompt": 'soft',
+            "complete_prompt": current_head + '<span style="color:red;">soft</span>' + current_tail,
+            "generated_result": generated_texts[i],
+            'product_rank': current_rank
+        }
+        
+        current_table.add_data(iter,
+                            log_entry["attack_prompt"],
+                            log_entry["complete_prompt"],
+                            log_entry["generated_result"],
+                            log_entry["product_rank"])
+
+    logger.log({f"eval/target:{target_product}": current_table}, step=iter)
+
+    # print(f"{Fore.RED}Evaluation results have been saved to {output_file} at iteration {iter+1}{Style.RESET_ALL}")
+    # print(f"{Fore.RED}Target Product: {target_product} Rank: {min(product_ranks)} (11 means not found in the generated text){Style.RESET_ALL}")
+    
+    logger.log({"eval/product_rank": min(product_ranks),
+                "eval/batch_idx": product_ranks.index(min(product_ranks))}, step=iter)
+    
+    return current_table, min(product_ranks)
+
+    
     
 
 
@@ -241,7 +326,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
     device = model.device
     epsilon = nn.Parameter(torch.zeros_like(prompt_logits))
     # kaiming initialize  
-    nn.init.kaiming_normal_(epsilon)
+    # nn.init.kaiming_normal_(epsilon)
     optimizer = torch.optim.Adam([epsilon], lr=kwargs['lr'])
     batch_size = prompt_logits.size(0)
 
@@ -257,7 +342,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 random.shuffle(product_list)
 
             head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, target_product, batch_size, device)
-
+            
             # add learnable noise to prompt logits
             y_logits = prompt_logits + epsilon
 
@@ -315,8 +400,13 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
             # evaluate and log into a jsonl file
             if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
-                table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
-                        iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
+                # with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")), torch.no_grad():
+                #     table, rank = soft_log_result(model, tokenizer, head_tokens, y_logits, None, 
+                #             iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
+                    
+                # with torch.no_grad():
+                table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens,
+                                iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                 
                 current_rank = rank
                 tqdm.write(

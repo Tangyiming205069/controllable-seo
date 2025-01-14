@@ -8,9 +8,9 @@ parameters:
   model: 
     value: "llama-3.1-8b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
   batch_size: 
-    value: 2
+    value: 8
   length: 
-    value: 30
+    value: 20
   temperature:
     value: 0.001
   lr: 
@@ -33,7 +33,7 @@ parameters:
   iter_steps:
     value: [0, 50, 200, 500, 1500]
   noise_stds:
-    value: [1, 0.5, 0.1, 0.05, 0.01] # [0.1, 0.05, 0.01, 0.005, 0.001] 
+    value: [0.1, 0.05, 0.01, 0.001, 0.01]  # [1, 0.5, 0.1, 0.05, 0.01]
   # result_dir: 
   #   value: "result"
   catalog: 
@@ -48,4 +48,4 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "with paper 1 gcp init"
+    value: "target loss only with pure cold attack optimization and softforward inference"

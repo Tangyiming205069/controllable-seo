@@ -44,10 +44,9 @@ def get_model(model_path, precision, device):
                                                            use_fast=False,
                                                            use_cache=True)
     
-    # tokenizer.pad_token = tokenizer.unk_token
-    # tokenizer.padding_side = 'left'
-    # if not tokenizer.pad_token:
-    #     tokenizer.pad_token = tokenizer.eos_token
+    if 'llama' in model_path:
+        tokenizer.pad_token = tokenizer.unk_token
+        tokenizer.padding_side = 'left'
 
     return model, tokenizer
 

@@ -35,7 +35,7 @@ def get_model(model_path, precision, device):
         trust_remote_code=True,
         low_cpu_mem_usage=True,
         use_cache=False
-        ).to(device).eval()
+    ).to(device).eval()
     for param in model.parameters():
         param.requires_grad = False
 

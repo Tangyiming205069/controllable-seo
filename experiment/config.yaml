@@ -8,13 +8,13 @@ parameters:
   model: 
     value: "llama-3.1-8b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
   batch_size: 
-    value: 8
+    value: 2
   length: 
-    value: 20
+    value: 30
   temperature:
     value: 0.001
   lr: 
-    values: [0.1, 0.003, 0.01]
+    value: 0.1
   topk: 
     value: 10
   num_iter: 
@@ -25,8 +25,8 @@ parameters:
     value: 16
   loss_weights: 
     value: { 
-      "fluency": 1, # 1
-      "ngram": 100, # 100
+      "fluency": 0, # 1
+      "ngram": 0, # 100
       "target": 100 # 100
     }
 
@@ -48,4 +48,4 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "target loss only with pure cold attack optimization and softforward inference"
+    value: "target product at last and inference at original place with longer prompt"

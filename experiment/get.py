@@ -6,23 +6,23 @@ def get_user_query(user_msg_type, catalog):
         if user_msg_type == "default":
             user_msg = "I am looking for a coffee machine. Can I get some recommendations?"
         elif user_msg_type == "custom":
-            user_msg = "I am looking for an affordable coffee machine. Can I get some recommendations?"
+            user_msg = "I am looking for an affordable coffee machine. Can I get some recommendations from the following products?"
     elif catalog == "books":
         catalog = "data/books.jsonl"
         if user_msg_type == "default":
             user_msg = "I am looking for a book. Can I get some recommendations?"
         elif user_msg_type == "custom":
-            user_msg = "I am looking for a good adventure novel. Can I get some recommendations?"
+            user_msg = "I am looking for a good adventure novel. Can I get some recommendations from the following books?"
     elif catalog == "cameras":
         catalog = "data/cameras.jsonl"
         if user_msg_type == "default":
             user_msg = "I am looking for a camera. Can I get some recommendations?"
         elif user_msg_type == "custom":
-            user_msg = "I am looking for a high resolution camera. Can I get some recommendations?"
+            user_msg = "I am looking for a high resolution camera. Can I get some recommendations from the following cameras?"
     elif catalog == "election_articles":
         catalog = "data/election_articles.jsonl"
         if user_msg_type == "default":
-            user_msg = "I am looking for an article. Can I get some recommendations?"
+            user_msg = "I am looking for an article. Can I get some recommendations from the following articles?"
     else:
         raise ValueError("Invalid catalog.")
     return user_msg

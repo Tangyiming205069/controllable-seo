@@ -6,13 +6,13 @@ metric:
 
 parameters: 
   model: 
-    value: "llama-3.1-8b" # Choices: ["llama-3.1-8b", "llama-2-7b"]
+    value: "llama-3.1-8b"
   batch_size: 
     value: 2
   length: 
     value: 30
   temperature:
-    value: 0.001
+    values: [1, 0.7, 0.5, 0.1]
   lr: 
     value: 0.1
   topk: 
@@ -25,8 +25,8 @@ parameters:
     value: 16
   loss_weights: 
     value: { 
-      "fluency": 0, # 1
-      "ngram": 0, # 100
+      "fluency": 1, # 1
+      "ngram": 100, # 100
       "target": 100 # 100
     }
 
@@ -39,7 +39,7 @@ parameters:
   catalog: 
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
-    value: False 
+    value: True 
   target_product_idx: 
     value: 5
   mode: 
@@ -48,4 +48,4 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "target product at last and inference at original place with longer prompt"
+    value: "training and inference with target at last and all losses applied"

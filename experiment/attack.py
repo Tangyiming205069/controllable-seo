@@ -1,8 +1,9 @@
-import torch, json, random, wandb
+import torch, random, wandb
 from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
 from experiment.process import greedy_decode, process_headtail, select_topk, create_bad_words_mask, mask_logits
+from transformers import DynamicCache
 # from colorama import Fore, Style
 
 
@@ -20,10 +21,10 @@ def soft_forward(model, head_tokens, prompt_logits,
     prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
 
     total = [head_embeddings, prompt_embeddings, tail_embeddings]
-
+    
     start = head_tokens.shape[1] - 1
     end = start + prompt_logits.shape[1]
-
+    # import pdb; pdb.set_trace()
     # Step 4: add target embeddings if provided
     if target_tokens is not None:
         target_embeddings = embedding_layer(target_tokens)  # Shape: (batch_size, target_length, embedding_dim)
@@ -179,15 +180,17 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     
     product_names = [product['Name'] for product in product_list]
 
-    prompt_tokens, decoded_prompt, _ = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
+    # prompt_tokens, decoded_prompt, _ = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
+    # use greedy decode
+    prompt_tokens, decoded_prompt = greedy_decode(logits, tokenizer)
 
     # Concatenate head prompt, decoded text, and tail tokens
     complete_prompt = torch.cat([head_tokens, prompt_tokens, tail_tokens], dim=1)
 
     # Generate result from model using the complete prompt
-    batch_result = model.generate(complete_prompt,# model.generation_config, 
+    batch_result = model.generate(complete_prompt, model.generation_config, 
                                   max_new_tokens=800, 
-                                  do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
+                                #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
                                   attention_mask=torch.ones_like(complete_prompt), 
                                   pad_token_id=tokenizer.eos_token_id)
 
@@ -236,38 +239,34 @@ def soft_log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     torch.cuda.empty_cache()
     product_names = [product['Name'] for product in product_list]
 
-    _, _, masked_logits = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
+    # _, _, masked_logits = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
 
     embedding_layer = model.get_input_embeddings()  # Usually model.embeddings or model.get_input_embeddings()
     
     # Step 2: Hard-select embeddings for head and tail
     head_embeddings =  embedding_layer(head_tokens)  # Shape: (batch_size, head_length, embedding_dim)
     tail_embeddings = embedding_layer(tail_tokens)  # Shape: (batch_size, tail_length, embedding_dim)
-
     # Step 3: Soft-select embeddings for prompt
-    prompt_probs = torch.softmax(masked_logits, dim=-1)  # Shape: (batch_size, prompt_length, vocab_size)
-    vocab_embeddings = embedding_layer.weight  # Embedding matrix (vocab_size, embedding_dim)
+    # prompt_probs = torch.softmax(masked_logits, dim=-1)  # Shape: (batch_size, prompt_length, vocab_size)
+    # vocab_embeddings = embedding_layer.weight  # Embedding matrix (vocab_size, embedding_dim)
 
-    prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
+    # prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
+
+    # hard select prompt embeddings
+    prompt_embeddings = embedding_layer(logits.argmax(dim=-1))
 
     total_embeddings = torch.cat([head_embeddings, prompt_embeddings, tail_embeddings], dim=1)
 
-    # import pdb; pdb.set_trace()
-    # batch_result = model.generate(model.generation_config, input_embeds=total_embeddings, max_new_tokens=1000,
-    #                             #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
-    #                               attention_mask=torch.ones((total_embeddings.size(0), total_embeddings.size(1))),
-    #                               pad_token_id=tokenizer.eos_token_id)
-
-    # batch_result = batch_result[:, total_embeddings.shape[1]:]
     result = []
     past_embed = total_embeddings[:, :-1, :]
     past = model(inputs_embeds=past_embed, use_cache=True).past_key_values
+    past = DynamicCache.from_legacy_cache(past)
 
     input_embeds = total_embeddings[:, -1:, :]
 
-    for i in range(800):
+    for i in range(800-total_embeddings.shape[1]):
         output = model(inputs_embeds=input_embeds, past_key_values=past, use_cache=True)
-        past = output.past_key_values
+        past = DynamicCache.from_legacy_cache(output.past_key_values)
         last_logits = output.logits[:, -1:, :]
 
         token = torch.argmax(last_logits, dim=-1)
@@ -357,6 +356,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             flu_loss = fluency_loss(perturbed_y_logits, y_logits)
             
             # target loss
+            # soft_logits = y_logits / kwargs['temperature']  
             soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
             with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
                 target_logits = soft_forward(model, head_tokens, soft_logits, tail_tokens, target_tokens)
@@ -395,15 +395,16 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
             # evaluate and log into a jsonl file
             if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
+                # import pdb; pdb.set_trace()
                 # with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")), torch.no_grad():
-                #     table, rank = soft_log_result(model, tokenizer, head_tokens, y_logits, None, 
+                #     table, rank = soft_log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
                 #             iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                     
                 
-                val_head_tokens, val_tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg,
-                                                                    target_product, batch_size, device, last=False)
+                # val_head_tokens, val_tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg,
+                #                                                     target_product, batch_size, device, last=False)
                 with torch.no_grad():
-                    table, rank = log_result(model, tokenizer, val_head_tokens, y_logits, val_tail_tokens,
+                    table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens,
                                 iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                 
                 current_rank = rank

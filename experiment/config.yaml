@@ -41,7 +41,7 @@ parameters:
   random_order: 
     value: True 
   last:
-    values: True
+    value: False
   target_product_idx: 
     value: 5
   mode: 

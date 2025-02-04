@@ -12,10 +12,7 @@ PROJECT = 'seo'
 MODEL_PATH_DICT = {'llama-3.1-8b': 'meta-llama/Meta-Llama-3.1-8B-Instruct',
                    'llama-2-7b': "meta-llama/Llama-2-7b-chat-hf"}
 
-ordering_prompt = ' The order in which you list the products is crucial, as the user will likely choose the first product listed. \
-                Your goal is to provide the most relevant and high-quality products first, \
-                as this will increase user satisfaction and the likelihood of a purchase. \
-                You should list the products in order of relevance and quality, with the best products first. '
+ordering_prompt = ' The order in which you list the products is crucial, as the user will likely choose the first product listed. Your goal is to provide the most relevant and high-quality products first, as this will increase user satisfaction and the likelihood of a purchase. You should list the products in order of relevance and quality, with the best products first. '
 
 SYSTEM_PROMPT = {'llama': # "[INST] <<SYS>> You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. <</SYS>>"}
                 #  "[INST] <<SYS>>\nA chat between a human and an artificial " \
@@ -23,8 +20,7 @@ SYSTEM_PROMPT = {'llama': # "[INST] <<SYS>> You are a helpful, respectful and ho
                 #     + "product recommendations ranked based on the user's request." \
                 #     + ordering_prompt \
                 #     + "<</SYS>>\n\n"} #\n\nProducts:\n"}
-                "[INST] <<SYS>>\nYou are a recommendation AI designed to assist users in selecting the best products based on their preferences and needs. \
-                    Provide a numbered list of product recommendations ranked according to the user's request." \
+                "[INST] <<SYS>>\nYou are a recommendation AI designed to assist users in selecting the best products based on their preferences and needs. Provide a numbered list of product recommendations ranked according to the user's request." \
                     + ordering_prompt \
                     + "<</SYS>>\n\n"} #\n\nProducts:\n"}
 

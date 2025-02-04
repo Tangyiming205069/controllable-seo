@@ -8,7 +8,7 @@ parameters:
   model: 
     value: "llama-3.1-8b"
   batch_size: 
-    value: 2
+    value: 5
   length: 
     value: 30
   temperature:
@@ -25,8 +25,8 @@ parameters:
     value: 16
   loss_weights: 
     value: { 
-      "fluency": 1, # 1
-      "ngram": 100, # 100
+      "fluency": 10, # 1
+      "ngram": 400, # 100
       "target": 100 # 100
     }
 
@@ -40,6 +40,8 @@ parameters:
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
     value: True 
+  last:
+    value: False
   target_product_idx: 
     value: 5
   mode: 
@@ -48,4 +50,4 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "training and inference with target at last and all losses applied"
+    value: "training and inference with target random and with new system product and user query and all losses"

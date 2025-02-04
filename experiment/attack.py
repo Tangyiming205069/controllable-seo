@@ -189,7 +189,7 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
     # Generate result from model using the complete prompt
     batch_result = model.generate(complete_prompt, model.generation_config, 
-                                  max_new_tokens=800, 
+                                  max_new_tokens=500, 
                                 #   do_sample=True, temperature=0.7, top_k=topk, # NOT sure if we need this 2 parameters. used in cold-attack but not in product ranking
                                   attention_mask=torch.ones_like(complete_prompt), 
                                   pad_token_id=tokenizer.eos_token_id)
@@ -336,7 +336,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 random.shuffle(product_list)
 
             head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, 
-                                                        target_product, batch_size, device, last=True)
+                                                        target_product, batch_size, device, last=kwargs['last'])
             # add learnable noise to prompt logits
             y_logits = prompt_logits + epsilon
 

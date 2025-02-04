@@ -155,7 +155,6 @@ def main():
                 topk=hparams.topk, 
                 lr=hparams.lr, 
                 precision=hparams.precision,
-                loss_weights=hparams.loss_weights,
                 random_order=hparams.random_order, 
                 temperature=hparams.temperature,
                 iter_steps=hparams.iter_steps,

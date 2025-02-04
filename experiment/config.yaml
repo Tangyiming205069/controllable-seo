@@ -12,9 +12,9 @@ parameters:
   length: 
     value: 30
   temperature:
-    values: [1, 0.7, 0.5, 0.1]
+    values: [1, 0.5, 0.1]
   lr: 
-    values: 0.03
+    values: [0.03, 0.01, 0.003, 0.1]
   topk: 
     value: 10
   num_iter: 
@@ -41,9 +41,9 @@ parameters:
   random_order: 
     value: True 
   last:
-    values: [False, True]
+    values: True
   target_product_idx: 
-    values: [5, 9]
+    value: 5
   mode: 
     value: "self" # Choices: ["self", "transfer"]
   user_msg_type: 

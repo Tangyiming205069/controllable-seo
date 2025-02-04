@@ -1,5 +1,5 @@
 import torch, os, wandb, yaml
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 from experiment.get import get_user_query, get_model, get_product_list
 from experiment.process import process_bad_words, greedy_decode, init_prompt, process_text
@@ -160,7 +160,10 @@ def main():
                 temperature=hparams.temperature,
                 iter_steps=hparams.iter_steps,
                 noise_stds=hparams.noise_stds,
-                last=hparams.last)
+                last=hparams.last,
+                fluency=hparams.fluency,
+                ngram=hparams.ngram,
+                target=hparams.target)
     
     wandb_logger.finish()
 

@@ -370,8 +370,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
             
             # total loss weighted sum
-            loss_weights = kwargs['loss_weights']
-            total_loss = loss_weights['fluency'] * flu_loss - loss_weights['ngram'] * n_gram_loss + loss_weights['target'] * target_loss
+            total_loss = kwargs['fluency'] * flu_loss - kwargs['ngram'] * n_gram_loss + kwargs['target'] * target_loss
             total_loss = total_loss.mean()
             
             # log the loss

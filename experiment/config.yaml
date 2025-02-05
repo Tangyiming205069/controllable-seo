@@ -8,13 +8,13 @@ parameters:
   model: 
     value: "llama-3.1-8b"
   batch_size: 
-    value: 6
+    value: 5
   length: 
     value: 30
   temperature:
-    values: [1, 0.5, 0.1]
+    values: [1, 0.2, 0.1]
   lr: 
-    values: [0.03, 0.01, 0.003, 0.1]
+    values: [0.03, 0.01, 0.1]
   topk: 
     value: 10
   num_iter: 
@@ -26,9 +26,9 @@ parameters:
   fluency:
     value: 1
   ngram:
-    value: 300
+    values: [5, 10, 100]
   target:
-    value: 80
+    values: [1, 50, 200]
 
   iter_steps:
     value: [0, 50, 200, 500, 1500]
@@ -41,7 +41,7 @@ parameters:
   random_order: 
     value: True 
   last:
-    value: False
+    value: True
   target_product_idx: 
     value: 5
   mode: 
@@ -50,4 +50,4 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "training and inference with target random and with new system product and user query and all losses"
+    value: "training and inference with target random with gcg greedy decode"

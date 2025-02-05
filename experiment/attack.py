@@ -1,4 +1,4 @@
-import torch, random, wandb
+import torch, random, wandb, unicodedata
 from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,7 +8,7 @@ from transformers import DynamicCache
 
 
 def soft_forward(model, head_tokens, prompt_logits, 
-                   tail_tokens, target_tokens=None):
+                   tail_tokens, target_tokens=None, seq_embed=False):
     embedding_layer = model.get_input_embeddings()  # Usually model.embeddings or model.get_input_embeddings()
     
     # Step 2: Hard-select embeddings for head and tail
@@ -22,9 +22,11 @@ def soft_forward(model, head_tokens, prompt_logits,
 
     total = [head_embeddings, prompt_embeddings, tail_embeddings]
     
+    input_embeddings = torch.cat(total, dim=1)
+
     start = head_tokens.shape[1] - 1
     end = start + prompt_logits.shape[1]
-    # import pdb; pdb.set_trace()
+
     # Step 4: add target embeddings if provided
     if target_tokens is not None:
         target_embeddings = embedding_layer(target_tokens)  # Shape: (batch_size, target_length, embedding_dim)
@@ -36,10 +38,12 @@ def soft_forward(model, head_tokens, prompt_logits,
 
     # Step 5: Forward pass through the model
     logits = model(inputs_embeds=sequence_embeddings).logits
-
+    # import pdb; pdb.set_trace()
     # return the prompt logits
     specific_logits = logits[:, start:end, :]
 
+    if seq_embed:
+        return logits
     return specific_logits
 
 
@@ -172,10 +176,55 @@ def topk_decode(model, tokenizer, y_logits, topk, temperature, head_tokens):
     decoded_tokens, decoded_text = greedy_decode(complete_masked_logits, tokenizer)
 
     return decoded_tokens, decoded_text, complete_masked_logits
-        
 
 
-def log_result(model, tokenizer, head_tokens, logits, tail_tokens, 
+def gcg_decode(model, tokenizer, head_tokens, y_logits, topk, tail_tokens, target_tokens):
+    # apply one step of greedy coordinate gradient focusing only on target loss
+    embedding_layer = model.get_input_embeddings()
+    embedding_matrix = embedding_layer.weight.data
+
+    head_embeddings = embedding_layer(head_tokens)
+    tail_embeddings = embedding_layer(tail_tokens)
+    target_embeddings = embedding_layer(target_tokens)
+
+    prompt_probs = torch.softmax(y_logits, dim=-1)
+    prompt_embeddings = torch.matmul(prompt_probs, embedding_matrix)
+    input_embeddings = torch.cat([head_embeddings, prompt_embeddings, tail_embeddings], dim=1)
+    input_embeddings.retain_grad()
+
+    total_embeddings = torch.cat([input_embeddings, target_embeddings], dim=1)
+    
+    logits = model(inputs_embeds=total_embeddings).logits
+
+    loss_fn = nn.CrossEntropyLoss()
+
+    loss = []
+    # import pdb; pdb.set_trace()
+    for i in range(input_embeddings.shape[0]):
+        loss.append(loss_fn(logits[i, input_embeddings.shape[1]-1:-1, :], target_tokens[i]))
+
+    loss = torch.stack(loss).sum()
+
+    (-loss).backward()
+    gradients = input_embeddings.grad
+    # import pdb; pdb.set_trace()
+    start = head_tokens.shape[1] - 1
+    end = start + y_logits.shape[1]
+
+    dot_prod = torch.matmul(gradients, embedding_matrix.T)[:, start:end, :]
+
+    topk_mask = select_topk(y_logits, topk)
+
+    # mask the dot_prod
+    dot_prod = mask_logits(dot_prod, topk_mask)
+
+    decoded_tokens, decoded_text = greedy_decode(dot_prod, tokenizer)
+
+    return decoded_tokens, decoded_text
+
+
+
+def log_result(model, tokenizer, head_tokens, logits, tail_tokens, target_tokens,
                iter, product_list, target_product, result_table, logger, topk, temperature):
     
     product_names = [product['Name'] for product in product_list]
@@ -183,6 +232,10 @@ def log_result(model, tokenizer, head_tokens, logits, tail_tokens,
     # prompt_tokens, decoded_prompt, _ = topk_decode(model, tokenizer, logits, topk, temperature, head_tokens)
     # use greedy decode
     prompt_tokens, decoded_prompt = greedy_decode(logits, tokenizer)
+
+    # use gcg decode
+    # with torch.autocast(device_type=model.device.type, dtype=torch.float16):
+    #     prompt_tokens, decoded_prompt = gcg_decode(model, tokenizer, head_tokens, logits, topk, tail_tokens, target_tokens)
 
     # Concatenate head prompt, decoded text, and tail tokens
     complete_prompt = torch.cat([head_tokens, prompt_tokens, tail_tokens], dim=1)
@@ -402,8 +455,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 
                 # val_head_tokens, val_tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg,
                 #                                                     target_product, batch_size, device, last=False)
-                with torch.no_grad():
-                    table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens,
+                table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, target_tokens,
                                 iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                 
                 current_rank = rank

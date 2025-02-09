@@ -2,29 +2,25 @@
 ## Setup environment
 1. Create your environment with python3.11
 
-```conda create -n [seo] python=3.11```
+```conda create -n seo python=3.11```
 
 2. Activate this environment\
 
-```conda activate [seo]```
+```conda activate seo```
 
 3. Install PyTorch with CUDA
 
 ```conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia```
 
-4. Install transformers
+4. Install pip dependencies
 
-```pip install transformers```
+```pip install -r requirements.txt```
 
-5. Install wandb accelerate
-
-```pip install torch transformers wandb accelerate```
-
-6. Install seaborn
+5. Install seaborn
 
 ```conda install anaconda::seaborn```
 
-7. Install openai
+6. Install openai
 
 ```conda install conda-forge::openai```
 

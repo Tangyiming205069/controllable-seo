@@ -1,21 +1,29 @@
 # controllable-seo
 ## Setup environment
 1. Create your environment with python3.11
+
 ```conda create -n [seo] python=3.11```
-2. Activate this environment
+3. Activate this environment\
+
 ```conda activate [seo]```
-3. Install PyTorch with CUDA
+4. Install PyTorch with CUDA
+
 ```conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia```
-4. Install transformers
+5. Install transformers
+
 ```pip install transformers```
-5. Install wandb accelerate
+6. Install wandb accelerate
+
 ```pip install torch transformers wandb accelerate```
-6. Install seaborn
+7. Install seaborn
+
 ```conda install anaconda::seaborn```
-7. Install openai
+8. Install openai
+
 ```conda install conda-forge::openai```
 
 Log in to your huggingface with your authorized token:
+
 ```huggingface-cli login```
 
 Make sure to modify wandb's ```ENITY``` and ```PROJECT``` to your project group

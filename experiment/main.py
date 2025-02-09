@@ -2,6 +2,8 @@ import torch, os, wandb, yaml, random
 import numpy as np
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+import argparse
+
 from experiment.get import get_user_query, get_model, get_product_list
 from experiment.process import process_bad_words, greedy_decode, init_prompt, process_text, process_stop_words, get_original_embedding
 from experiment.attack import attack_control
@@ -173,7 +175,11 @@ def main():
 
 
 if __name__ == "__main__":
-    with open(f'experiment/config.yaml', 'r') as f:
+    args = argparse.ArgumentParser()
+    args.add_argument("--mode", type=str, choices=['suffix', 'paraphrase'], default='suffix')
+    args = args.parse_args()
+
+    with open(f'configs/{args.mode}.yaml', 'r') as f:
         sweep_config = yaml.safe_load(f)
     search_hparams = get_search_hparams(sweep_config)
     sweep_id = wandb.sweep(sweep_config, entity=ENTITY, project=PROJECT)

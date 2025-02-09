@@ -455,7 +455,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                         "train/target_loss": target_loss.mean().item()},
                         step=iter)
             
-            if similarity_score:
+            if similarity_score is not None:
                 logger.log({"train/similarity": similarity_score.mean().item()}, step=iter)
 
 

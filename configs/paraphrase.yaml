@@ -6,7 +6,7 @@ metric:
 
 parameters: 
   seed:
-    values: [12, 20, 42, 7]
+    value: 42
 
   model: 
     value: llama-3.1-8b # deepseek-7b # vicuna-7b # mistral-7b
@@ -16,9 +16,9 @@ parameters:
   batch_size: 
     value: 5
   length: 
-    value: 30 # 30 for suffix, 50 for paraphrase
+    value: 50 # 30 for suffix, 50 for paraphrase
   temperature:
-    value: 0.1
+    values: [0.1, 0.2]
   lr: 
     values: [0.03, 0.01]
   topk: 
@@ -26,7 +26,7 @@ parameters:
   num_iter: 
     value: 2000
   test_iter: 
-    value: 200
+    value: 100
   precision: 
     value: 16
   fluency:
@@ -49,11 +49,11 @@ parameters:
   random_order: 
     value: True 
   random_inference:
-    values: [False, True]
+    values: [False]
   target_product_idx: 
     value: 5
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "grid search on seeds with only assistant prompt"
+    value: "grid search paraphrase"

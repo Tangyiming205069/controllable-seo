@@ -2,7 +2,7 @@ import torch, random, wandb, unicodedata
 from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
-from experiment.process import greedy_decode, process_headtail, select_topk, create_bad_words_mask, mask_logits
+from experiment.process import greedy_decode, process_headtail, select_topk, create_word_mask, mask_logits, get_logits_embedding
 from transformers import DynamicCache
 # from colorama import Fore, Style
 
@@ -88,6 +88,10 @@ def bleu_loss(decoder_outputs, target_idx, ngram_list, pad=0, weight_list=None):
 
     loss = - sum_gram
     return loss
+
+
+
+
 
 
 def add_static_noise(prompt_logits, iter, iter_steps, noise_stds):
@@ -360,10 +364,11 @@ def soft_log_result(model, tokenizer, head_tokens, logits, tail_tokens,
 
 
 def attack_control(model, tokenizer, system_prompt, user_msg,
-                   prompt_logits, target_tokens, bad_words_tokens, 
+                   prompt_logits, target_tokens, extra_word_tokens, 
                    product_list, target_product, logger, table,
-                   **kwargs):
+                   original_embedding=None, **kwargs):
 
+    mode = kwargs['mode'] # suffix or paraphrase
     device = model.device
     epsilon = nn.Parameter(torch.zeros_like(prompt_logits))
     # kaiming initialize  
@@ -371,9 +376,9 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
     optimizer = torch.optim.Adam([epsilon], lr=kwargs['lr'])
     batch_size = prompt_logits.size(0)
 
+    extra_mask = create_word_mask(extra_word_tokens, prompt_logits)
+    
     topk_mask = None
-    bad_words_mask = create_bad_words_mask(bad_words_tokens, prompt_logits)
-
     current_rank = None
 
     with tqdm(total=kwargs['num_iter'], desc="Training", unit="iter") as pbar:
@@ -384,7 +389,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
             # train with target product at last
             head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, 
-                                                        target_product, batch_size, device, last=True)
+                                                        target_product, batch_size, mode, device, last=True)
             # add learnable noise to prompt logits
             y_logits = prompt_logits + epsilon
 
@@ -392,14 +397,14 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             if topk_mask is None:
                 fluency_soft_logits = (y_logits.detach() / kwargs['temperature'] - y_logits).detach() + y_logits
             else:
-                fluency_soft_logits = mask_logits(y_logits, topk_mask, bad_words_mask) / kwargs['temperature']
+                fluency_soft_logits = mask_logits(y_logits, topk_mask, extra_mask) / kwargs['temperature']
 
             with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")):
                 perturbed_y_logits = soft_forward(model, head_tokens, fluency_soft_logits, tail_tokens).detach()
             
             topk_mask = select_topk(perturbed_y_logits, kwargs['topk'])
 
-            perturbed_y_logits = mask_logits(perturbed_y_logits, topk_mask, bad_words_mask)
+            perturbed_y_logits = mask_logits(perturbed_y_logits, topk_mask, extra_mask)
 
             flu_loss = fluency_loss(perturbed_y_logits, y_logits)
             
@@ -415,20 +420,31 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             target_loss = target_loss.view(batch_size, -1).mean(dim=-1)
 
             # ngram bleu loss
-            n_gram_loss = bleu_loss(y_logits, bad_words_tokens, ngram_list=[1])
+            if mode == 'suffix':
+                n_gram_loss = bleu_loss(y_logits, extra_word_tokens, ngram_list=[1])
+                total_loss = kwargs['fluency'] * flu_loss - kwargs['ngram'] * n_gram_loss + kwargs['target'] * target_loss
+                similarity_score = None
+
+            elif mode == 'paraphrase':
+                mask_y_logits = mask_logits(y_logits, topk_mask, extra_mask)
+                n_gram_loss = bleu_loss(mask_y_logits, extra_word_tokens, ngram_list=[1, 2, 3])
+
+                logits_embedding = get_logits_embedding(model, y_logits, kwargs['temperature'])
+
+                similarity_score = F.cosine_similarity(original_embedding, logits_embedding)
+                total_loss = kwargs['fluency'] * flu_loss + kwargs['ngram'] * n_gram_loss + kwargs['target'] * target_loss - kwargs['similarity'] * similarity_score
+
             
             # total loss weighted sum
-            total_loss = kwargs['fluency'] * flu_loss - kwargs['ngram'] * n_gram_loss + kwargs['target'] * target_loss
+            
             total_loss = total_loss.mean()
             
-            # log the loss
-            # print_iteration_metrics(iter, total_loss.item(), flu_loss.mean().item(), n_gram_loss.mean().item(), target_loss.mean().item())
-
             pbar.set_postfix({
                 "Total Loss": f"{total_loss.item():.2f}",
+                "Target": f"{target_loss.mean().item():.2f}",
                 "Fluency": f"{flu_loss.mean().item():.2f}",
                 "N-gram": f"{n_gram_loss.mean().item():.2f}",
-                "Target": f"{target_loss.mean().item():.2f}",
+                "Similarity": f"{similarity_score.mean().item():.2f}" if similarity_score is not None else "N/A",
                 "Rank": f"{current_rank}"
             })
             
@@ -436,8 +452,11 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
             logger.log({"train/loss": total_loss.item(), 
                         "train/fluency_loss": flu_loss.mean().item(), 
                         "train/ngram_loss": n_gram_loss.mean().item(), 
-                        "train/target_loss": target_loss.mean().item()}, 
+                        "train/target_loss": target_loss.mean().item()},
                         step=iter)
+            
+            if similarity_score:
+                logger.log({"train/similarity": similarity_score.mean().item()}, step=iter)
 
 
             # evaluate and log into a jsonl file

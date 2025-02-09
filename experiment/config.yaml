@@ -10,10 +10,13 @@ parameters:
 
   model: 
     value: llama-3.1-8b # deepseek-7b # vicuna-7b # mistral-7b
+  mode:
+    value: "paraphrase" # Choices: ["paraphrase", "suffix"]
+
   batch_size: 
-    value: 6
+    value: 5
   length: 
-    value: 30
+    value: 30 # 30 for suffix, 50 for paraphrase
   temperature:
     value: 0.1
   lr: 
@@ -29,9 +32,11 @@ parameters:
   fluency:
     value: 1
   ngram:
-    values: [5, 10] # 10
+    values: [5, 10, 50] # 10
   target:
-    value: 50
+    values: [50, 100]
+  similarity:
+    value: 1
 
   iter_steps:
     value: [0, 50, 200, 500, 1500]

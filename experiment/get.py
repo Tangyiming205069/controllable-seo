@@ -67,5 +67,7 @@ def get_product_list(catalog, target_product_idx):
 
     target_product = product_list[target_product_idx]['Name']
 
+    target_product_natural = product_list[target_product_idx]['Natural']
+
     target_str = "1. " + target_product
-    return product_list, target_product, target_str
+    return product_list, target_product, target_product_natural, target_str

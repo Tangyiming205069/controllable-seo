@@ -36,14 +36,17 @@ def get_model(model_path, precision, device):
         low_cpu_mem_usage=True,
         use_cache=False
     ).to(device).eval()
+
+    model.generation_config.do_sample = True
+
     for param in model.parameters():
         param.requires_grad = False
-
+ 
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_path,
                                                            trust_remote_code=True,
                                                            use_fast=False,
                                                            use_cache=True)
-    
+
     if 'llama' in model_path:
         tokenizer.pad_token = tokenizer.unk_token
         tokenizer.padding_side = 'left'

@@ -8,7 +8,7 @@ from transformers import DynamicCache
 
 
 def soft_forward(model, head_tokens, prompt_logits, 
-                   tail_tokens, target_tokens=None, seq_embed=False):
+                   tail_tokens, target_tokens=None):
     embedding_layer = model.get_input_embeddings()  # Usually model.embeddings or model.get_input_embeddings()
     
     # Step 2: Hard-select embeddings for head and tail
@@ -21,8 +21,6 @@ def soft_forward(model, head_tokens, prompt_logits,
     prompt_embeddings = torch.matmul(prompt_probs, vocab_embeddings)  # Shape: (batch_size, prompt_length, embedding_dim)
 
     total = [head_embeddings, prompt_embeddings, tail_embeddings]
-    
-    input_embeddings = torch.cat(total, dim=1)
 
     start = head_tokens.shape[1] - 1
     end = start + prompt_logits.shape[1]
@@ -38,12 +36,9 @@ def soft_forward(model, head_tokens, prompt_logits,
 
     # Step 5: Forward pass through the model
     logits = model(inputs_embeds=sequence_embeddings).logits
-    # import pdb; pdb.set_trace()
     # return the prompt logits
     specific_logits = logits[:, start:end, :]
 
-    if seq_embed:
-        return logits
     return specific_logits
 
 
@@ -162,7 +157,6 @@ def topk_decode(model, tokenizer, y_logits, topk, temperature, head_tokens):
         past = output.past_key_values
         last_logits = output.logits[:, -1:, :]
         topk_mask = select_topk(last_logits, topk)
-        # import pdb; pdb.set_trace()
 
         total_topk_mask = topk_mask if i == 0 else torch.cat([total_topk_mask, topk_mask], dim=1)
 
@@ -199,7 +193,7 @@ def gcg_decode(model, tokenizer, head_tokens, y_logits, topk, tail_tokens, targe
     loss_fn = nn.CrossEntropyLoss()
 
     loss = []
-    # import pdb; pdb.set_trace()
+
     for i in range(input_embeddings.shape[0]):
         loss.append(loss_fn(logits[i, input_embeddings.shape[1]-1:-1, :], target_tokens[i]))
 
@@ -207,7 +201,7 @@ def gcg_decode(model, tokenizer, head_tokens, y_logits, topk, tail_tokens, targe
 
     (-loss).backward()
     gradients = input_embeddings.grad
-    # import pdb; pdb.set_trace()
+
     start = head_tokens.shape[1] - 1
     end = start + y_logits.shape[1]
 
@@ -388,8 +382,9 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 # shuffle the product list
                 random.shuffle(product_list)
 
+            # train with target product at last
             head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, 
-                                                        target_product, batch_size, device, last=kwargs['last'])
+                                                        target_product, batch_size, device, last=True)
             # add learnable noise to prompt logits
             y_logits = prompt_logits + epsilon
 
@@ -447,14 +442,15 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
 
             # evaluate and log into a jsonl file
             if iter == 0 or (iter+1) % kwargs['test_iter'] == 0 or iter == kwargs['num_iter'] - 1:
-                # import pdb; pdb.set_trace()
                 # with torch.autocast(device_type=device.type, dtype=eval(f"torch.float{kwargs['precision']}")), torch.no_grad():
                 #     table, rank = soft_log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, 
                 #             iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                     
-                
-                # val_head_tokens, val_tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg,
-                #                                                     target_product, batch_size, device, last=False)
+                # inference at random places
+                if kwargs['random_inference']:
+                    head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg,
+                                                                    target_product, batch_size, device, last=False)
+
                 table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, target_tokens,
                                 iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])
                 

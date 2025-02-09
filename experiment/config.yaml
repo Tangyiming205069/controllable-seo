@@ -5,16 +5,19 @@ metric:
     goal: 'minimize'   
 
 parameters: 
+  seed:
+    values: [12, 20, 42, 7]
+
   model: 
-    value: "llama-3.1-8b"
+    value: llama-3.1-8b # deepseek-7b # vicuna-7b # mistral-7b
   batch_size: 
-    value: 5
+    value: 6
   length: 
     value: 30
   temperature:
-    values: [1, 0.2, 0.1]
+    value: 0.1
   lr: 
-    values: [0.03, 0.01, 0.1]
+    values: [0.03, 0.01]
   topk: 
     value: 10
   num_iter: 
@@ -26,9 +29,9 @@ parameters:
   fluency:
     value: 1
   ngram:
-    values: [5, 10, 100]
+    values: [5, 10] # 10
   target:
-    values: [1, 50, 200]
+    value: 50
 
   iter_steps:
     value: [0, 50, 200, 500, 1500]
@@ -40,14 +43,12 @@ parameters:
     value: "coffee_machines" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
   random_order: 
     value: True 
-  last:
-    value: True
+  random_inference:
+    values: [False, True]
   target_product_idx: 
     value: 5
-  mode: 
-    value: "self" # Choices: ["self", "transfer"]
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
 
   comment:
-    value: "training and inference with target random with gcg greedy decode"
+    value: "grid search on seeds with only assistant prompt"

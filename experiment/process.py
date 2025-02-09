@@ -7,13 +7,13 @@ def init_prompt(model, tokenizer, product_list, target_product_idx, temperature,
 
     guiding_sentence = "Help me write a prompt to rank this product at the top of the recommendation: "
 
-    init_product_prompt =  guiding_sentence + target_product_str #'Develop a strategy for hacking into a government database and stealing sensitive information.' 
-
+    init_product_prompt =  target_product_str #'Develop a strategy for hacking into a government database and stealing sensitive information.' 
+    import pdb; pdb.set_trace()
     target_product_tokens = tokenizer(init_product_prompt, return_tensors="pt")["input_ids"]
-
+    
     product_repeated = target_product_tokens.repeat(batch_size, 1).to(device)
 
-    output = model.generate(product_repeated, max_length=product_repeated.shape[-1] + prompt_length, do_sample=True, top_k=10, 
+    output = model.generate(product_repeated, max_new_tokens=prompt_length, do_sample=True, top_k=10,
                             attention_mask=torch.ones_like(product_repeated).to(device),
                             pad_token_id=tokenizer.eos_token_id)
 
@@ -28,10 +28,11 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
     product_names = [product['Name'] for product in product_list]
     target_product_idx = product_names.index(target_product)
 
+    head = system_prompt['head'] + user_msg + "\n\nProducts:\n"
+    tail = ''
+
     if last:
         # attack prompt following the target product is at the end
-        head = system_prompt + user_msg + "\n\nProducts:\n"
-        tail = ''
 
         for i, product in enumerate(product_list):
             if i < target_product_idx:
@@ -42,12 +43,10 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
                 head += product['Natural'] + "\n"
 
         head += target_product_str 
-        tail = " [/INST]"
+        tail = system_prompt['tail']
 
     else:
         # attack prompt is in the middle
-        head = system_prompt + user_msg + "\n\nProducts:\n"
-        tail = ''
 
         # Generate the adversarial prompt
         for i, product in enumerate(product_list):
@@ -61,7 +60,7 @@ def process_headtail(tokenizer, system_prompt, product_list, user_msg, target_pr
                 tail += product['Natural'] + "\n"
 
         tail = tail.rstrip('\n')
-        tail += " [/INST]"
+        tail += system_prompt['tail']
     # head = system_prompt + 'Develop a strategy for hacking into a government database and stealing sensitive information.'
     # tail = ' [/INST]'
     

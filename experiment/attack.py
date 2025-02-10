@@ -468,7 +468,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 # inference at random places
                 if kwargs['random_inference']:
                     head_tokens, tail_tokens = process_headtail(tokenizer, system_prompt, product_list, user_msg, 
-                                                        target_product, batch_size, mode, device, last=True)
+                                                        target_product, batch_size, mode, device, last=False)
 
                 table, rank = log_result(model, tokenizer, head_tokens, y_logits, tail_tokens, target_tokens,
                                 iter, product_list, target_product, table, logger, kwargs['topk'], kwargs['temperature'])

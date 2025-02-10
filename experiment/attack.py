@@ -486,7 +486,7 @@ def attack_control(model, tokenizer, system_prompt, user_msg,
                 optimizer.step()
                 prompt_logits = add_static_noise(prompt_logits, iter, kwargs['iter_steps'], kwargs['noise_stds'])
         
-
+    return table, rank
     
 
 

@@ -24,9 +24,9 @@ parameters:
   topk: 
     value: 10
   num_iter: 
-    value: 2000
+    value: 1
   test_iter: 
-    value: 200
+    value: 100
   precision: 
     value: 16
   fluency:
@@ -45,7 +45,7 @@ parameters:
   # result_dir: 
   #   value: "result"
   catalog: 
-    value: "books" # Choices: ["election_articles", "coffee_machines", "books", "cameras"]
+    value: "books" # Choices: ["coffee_machines", "books", "cameras"]
   random_order: 
     value: True 
   random_inference:
@@ -54,6 +54,9 @@ parameters:
     values: [1,2,3,4,5,6,7,8,9,10]
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
+
+  result_dir:
+    value: "test/suffix/v1"
 
   comment:
     value: "grid search paraphrase"

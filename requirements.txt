@@ -31,11 +31,14 @@ nvidia-nccl-cu12==2.21.5
 nvidia-nvjitlink-cu12==12.4.127
 nvidia-nvtx-cu12==12.4.127
 packaging==24.2
+pandas==2.2.3
 platformdirs==4.3.6
 protobuf==5.29.3
 psutil==6.1.1
 pydantic==2.10.6
 pydantic_core==2.27.2
+python-dateutil==2.9.0.post0
+pytz==2025.1
 PyYAML==6.0.2
 regex==2024.11.6
 requests==2.32.3
@@ -52,5 +55,6 @@ tqdm==4.67.1
 transformers==4.48.3
 triton==3.2.0
 typing_extensions==4.12.2
+tzdata==2025.1
 urllib3==2.3.0
 wandb==0.19.6

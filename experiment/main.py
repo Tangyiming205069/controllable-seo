@@ -1,4 +1,5 @@
 import torch, os, wandb, yaml, random
+import pandas as pd
 import numpy as np
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -84,7 +85,20 @@ def log_init_prompt(logger, decoded_sentences):
     logger.log({"eval/initial_prompt": init_table}, commit=False)
 
 
+def save_local_result(table, hparams):
+    result_path = f'{hparams.result_dir}/{hparams.model}/{hparams.catalog}/{hparams.target_product_idx}'
+    os.makedirs(result_path, exist_ok=True)
+    table_path = f'{result_path}/random_inference={hparams.random_inference}.csv'
+    # import pdb; pdb.set_trace()
+    table = table.get_dataframe()
+    table.to_csv(table_path, index=False)
+    print(f"Local result saved to {table_path}")
+
+
 def main():
+    # clear cuda
+    torch.cuda.empty_cache()
+
     wandb_logger = wandb.init(entity=ENTITY, project=PROJECT)
     wandb_table = wandb.Table(columns=["iter", "attack_prompt", "complete_prompt", "generated_result", "product_rank"])
     hparams = wandb.config
@@ -142,7 +156,7 @@ def main():
         raise ValueError("Invalid mode.")
 
     # Attack control
-    attack_control(model=model, 
+    table, rank = attack_control(model=model, 
                 tokenizer=tokenizer,
                 system_prompt=SYSTEM_PROMPT[hparams.model.split("-")[0]],
                 user_msg=user_msg,
@@ -170,18 +184,35 @@ def main():
                 similarity=hparams.similarity,
                 mode=hparams.mode)
     
+    if hparams.result_dir is not None:
+        save_local_result(table, hparams)
+    
     wandb_logger.finish()
 
 
-
-if __name__ == "__main__":
+def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--mode", type=str, choices=['suffix', 'paraphrase'], default='suffix')
-    args = args.parse_args()
+    args.add_argument("--catalog", type=str, choices=["coffee_machines", "books", "cameras"], default=None)
+    args.add_argument("--model", type=str, choices=['llama-3.1-8b', 'llama-2-7b', 'vicuna-7b', 'mistral-7b', 'deepseek-7b'], default=None)
+    return args.parse_args()
+
+
+if __name__ == "__main__":
+    args = get_args()
 
     with open(f'configs/{args.mode}.yaml', 'r') as f:
         sweep_config = yaml.safe_load(f)
     search_hparams = get_search_hparams(sweep_config)
+
+    if args.model:
+        sweep_config['parameters']['model']['value'] = args.model
+
+    if args.catalog:
+        sweep_config['parameters']['catalog']['value'] = args.catalog
+
+    assert args.mode == sweep_config['parameters']['mode']['value']
+
     sweep_id = wandb.sweep(sweep_config, entity=ENTITY, project=PROJECT)
     wandb.agent(sweep_id, function=main, entity=ENTITY, project=PROJECT)
 

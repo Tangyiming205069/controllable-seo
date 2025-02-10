@@ -1,5 +1,5 @@
 method: 'grid'
-name: 'seo'
+name: 'seo_suffix'
 metric: 
     name: 'eval/product_rank'
     goal: 'minimize'   

@@ -1,5 +1,5 @@
 method: 'grid'
-name: 'seo'
+name: 'seo_suffix'
 metric: 
     name: 'eval/product_rank'
     goal: 'minimize'   
@@ -9,7 +9,7 @@ parameters:
     value: 42
 
   model: 
-    value: mistral-7b # deepseek-7b # vicuna-7b # mistral-7b
+    value: mistral-7b # deepseek-7b # vicuna-7b # mistral-7b # can be ignored if using args
   mode:
     value: "suffix" # Choices: ["paraphrase", "suffix"]
 
@@ -24,7 +24,7 @@ parameters:
   topk: 
     value: 10
   num_iter: 
-    value: 1
+    value: 2000
   test_iter: 
     value: 100
   precision: 
@@ -45,7 +45,7 @@ parameters:
   # result_dir: 
   #   value: "result"
   catalog: 
-    value: "books" # Choices: ["coffee_machines", "books", "cameras"]
+    value: "books" # Choices: ["coffee_machines", "books", "cameras"] # can be ignored if using args
   random_order: 
     value: True 
   random_inference:
@@ -56,7 +56,7 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   result_dir:
-    value: "test/suffix/v1"
+    value: "result/suffix/v1"
 
   comment:
-    value: "grid search paraphrase"
+    value: "main experiment"

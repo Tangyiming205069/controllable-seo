@@ -8,19 +8,15 @@
 
 ```conda activate seo```
 
-3. Install PyTorch with CUDA
-
-```conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia```
-
-4. Install pip dependencies
+3. Install pip dependencies
 
 ```pip install -r requirements.txt```
 
-5. Install seaborn
+4. Install seaborn
 
 ```conda install anaconda::seaborn```
 
-6. Install openai
+5. Install openai
 
 ```conda install conda-forge::openai```
 

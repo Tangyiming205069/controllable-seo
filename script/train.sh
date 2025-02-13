@@ -4,8 +4,8 @@
 #SBATCH --gres=gpu:a6000:1
 #SBATCH --nodelist=dill-sage
 #SBATCH --time=4000
-#SBATCH --output=/home/tangyimi/controllable-seo/slurm_output/mistral/%j.out
-#SBATCH --job-name=mistral
+#SBATCH --output=/home/tangyimi/controllable-seo/slurm_output/deepseek/%j.out
+#SBATCH --job-name=deepseek
 
 # ["coffee_machines", "books", "cameras"]
 # ['llama-3.1-8b', 'llama-2-7b', 'vicuna-7b', 'mistral-7b', 'deepseek-7b']
@@ -24,5 +24,5 @@
 
 # python -m experiment.main --mode=suffix --catalog=coffee_machines --model=deepseek-7b
 # python -m experiment.main --mode=suffix --catalog=books --model=deepseek-7b
-# python -m experiment.main --mode=suffix --catalog=cameras --model=deepseek-7b
+python -m experiment.main --mode=suffix --catalog=cameras --model=deepseek-7b
 

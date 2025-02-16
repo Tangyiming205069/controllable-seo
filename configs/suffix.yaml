@@ -9,7 +9,7 @@ parameters:
     value: 42
 
   model: 
-    value: mistral-7b # deepseek-7b # vicuna-7b # mistral-7b # can be ignored if using args
+    value: llama-3.1-8b # deepseek-7b # vicuna-7b # mistral-7b # can be ignored if using args
   mode:
     value: "suffix" # Choices: ["paraphrase", "suffix"]
 
@@ -24,15 +24,15 @@ parameters:
   topk: 
     value: 10
   num_iter: 
-    value: 2000
+    value: 1000
   test_iter: 
     value: 100
   precision: 
     value: 16
   fluency:
-    value: 1
+    value: 2
   ngram:
-    value: 5 # 10
+    value: 50 # 10
   target:
     value: 50
   similarity:
@@ -45,7 +45,7 @@ parameters:
   # result_dir: 
   #   value: "result"
   catalog: 
-    value: "books" # Choices: ["coffee_machines", "books", "cameras"] # can be ignored if using args
+    value: "coffee_machines" # Choices: ["coffee_machines", "books", "cameras"] # can be ignored if using args
   random_order: 
     value: True 
   random_inference:
@@ -56,7 +56,7 @@ parameters:
     value: "default" # Choices: ["default", "custom"]
 
   result_dir:
-    value: "result/suffix/v1"
+    value: "result/suffix/v3"
 
   comment:
-    value: "main experiment"
+    value: "with larger ngram"

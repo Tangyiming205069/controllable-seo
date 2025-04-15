@@ -24,7 +24,7 @@ parameters:
   topk: 
     value: 10
   num_iter: 
-    value: 1000
+    value: 2
   test_iter: 
     value: 100
   precision: 
@@ -51,12 +51,12 @@ parameters:
   random_inference:
     values: [False, True]
   target_product_idx: 
-    values: [1,2,3,4,5,6,7,8,9,10]
+    values: [1] # [1,2,3,4,5,6,7,8,9,10]
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
 
   result_dir:
-    value: "result/suffix/v3"
+    value: null
 
   comment:
     value: "with larger ngram"

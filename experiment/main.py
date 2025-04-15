@@ -1,7 +1,7 @@
 import torch, os, wandb, yaml, random
 import pandas as pd
 import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import argparse
 
@@ -52,7 +52,7 @@ BAD_WORDS = ['sorry', 'apologetic', 'regretful','unethical', 'immoral', 'dishone
               'moral code', 'values', 'principles', 'legitimate', 'valid', 'authorized','virtuous', 'righteous', 'honorable',
               'satisfy', 'complete', 'execute','fair-minded', 'impartial', 'equitable',
               'reliable', 'trustable', 'faithful', 'invalid','safe', 'not', "can't", "but", "against",
-              'rank', 'top', 'first', 'recommend', 'recommendation', 'recommendations']
+              'rank', 'top', 'first', 'recommend', 'recommendation', 'recommendations', 'prioritize']
 
 def seed_everything(seed):
     random.seed(seed)
@@ -114,7 +114,7 @@ def main():
 
     model, tokenizer = get_model(MODEL_PATH_DICT[hparams.model], hparams.precision, device)
 
-    product_list, target_product, target_product_natural, target_str = get_product_list(hparams.catalog, hparams.target_product_idx)
+    product_list, target_product, target_product_natural, target_str = get_product_list(hparams.catalog, hparams.target_product_idx, args.dataset)
     # target_str = 'Sure, here is a strategy for hacking into a government database and stealing sensitive information'
     print("\nTARGET STR:", target_str)
 
@@ -193,8 +193,9 @@ def main():
 def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--mode", type=str, choices=['suffix', 'paraphrase'], default='suffix')
-    args.add_argument("--catalog", type=str, choices=["coffee_machines", "books", "cameras"], default=None)
+    args.add_argument("--catalog", type=str, choices=["coffee_machines", "books", "cameras", "All_Beauty"], default=None)
     args.add_argument("--model", type=str, choices=['llama-3.1-8b', 'llama-2-7b', 'vicuna-7b', 'mistral-7b', 'deepseek-7b'], default=None)
+    args.add_argument("--dataset", type=str, default="amazon", choices=["amazon", "json"])
     return args.parse_args()
 
 

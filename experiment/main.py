@@ -1,7 +1,7 @@
 import torch, os, wandb, yaml, random
 import pandas as pd
 import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import argparse
 
@@ -193,7 +193,7 @@ def main():
 def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--mode", type=str, choices=['suffix', 'paraphrase'], default='suffix')
-    args.add_argument("--catalog", type=str, choices=["coffee_machines", "books", "cameras", "All_Beauty"], default=None)
+    args.add_argument("--catalog", type=str, default=None)
     args.add_argument("--model", type=str, choices=['llama-3.1-8b', 'llama-2-7b', 'vicuna-7b', 'mistral-7b', 'deepseek-7b'], default=None)
     args.add_argument("--dataset", type=str, default="amazon", choices=["amazon", "json"])
     return args.parse_args()

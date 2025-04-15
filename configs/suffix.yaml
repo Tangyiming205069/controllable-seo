@@ -24,15 +24,15 @@ parameters:
   topk: 
     value: 10
   num_iter: 
-    value: 2
+    value: 2000
   test_iter: 
-    value: 100
+    value: 200
   precision: 
     value: 16
   fluency:
-    value: 2
+    value: 1
   ngram:
-    value: 50 # 10
+    value: 5 # 10
   target:
     value: 50
   similarity:
@@ -41,7 +41,7 @@ parameters:
   iter_steps:
     value: [0, 50, 200, 500, 1500]
   noise_stds:
-    value: [0.1, 0.05, 0.01, 0.001, 0.01]  # [1, 0.5, 0.1, 0.05, 0.01]
+    value: [1, 0.5, 0.1, 0.05, 0.01] #[0.1, 0.05, 0.01, 0.001, 0.01]  # 
   # result_dir: 
   #   value: "result"
   catalog: 
@@ -51,7 +51,7 @@ parameters:
   random_inference:
     values: [False, True]
   target_product_idx: 
-    values: [1] # [1,2,3,4,5,6,7,8,9,10]
+    values: [5] # [1,2,3,4,5,6,7,8,9,10]
   user_msg_type: 
     value: "default" # Choices: ["default", "custom"]
 

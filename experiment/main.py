@@ -1,7 +1,6 @@
 import torch, os, wandb, yaml, random
-import pandas as pd
 import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import argparse
 
@@ -78,7 +77,6 @@ def get_experiment_name(search_hparams, hparams):
 def log_init_prompt(logger, decoded_sentences):
     init_table = wandb.Table(columns=["prompt"])
 
-
     for sentence in decoded_sentences:
         init_table.add_data(sentence)
 
@@ -86,7 +84,7 @@ def log_init_prompt(logger, decoded_sentences):
 
 
 def save_local_result(table, hparams):
-    result_path = f'{hparams.result_dir}/{hparams.model}/{hparams.catalog}/{hparams.target_product_idx}'
+    result_path = f'{hparams.result_dir}/{hparams.model}/{hparams.dataset}/{hparams.catalog}/{hparams.target_product_idx}'
     os.makedirs(result_path, exist_ok=True)
     table_path = f'{result_path}/random_inference={hparams.random_inference}.csv'
     # import pdb; pdb.set_trace()
@@ -108,7 +106,7 @@ def main():
     # log all hparams
     wandb_logger.name = get_experiment_name(search_hparams, hparams)
 
-    user_msg = get_user_query(hparams.user_msg_type, hparams.catalog)
+    user_msg = get_user_query(hparams.catalog)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -195,7 +193,7 @@ def get_args():
     args.add_argument("--mode", type=str, choices=['suffix', 'paraphrase'], default='suffix')
     args.add_argument("--catalog", type=str, default=None)
     args.add_argument("--model", type=str, choices=['llama-3.1-8b', 'llama-2-7b', 'vicuna-7b', 'mistral-7b', 'deepseek-7b'], default=None)
-    args.add_argument("--dataset", type=str, default="amazon", choices=["amazon", "json"])
+    args.add_argument("--dataset", type=str, default="amazon", choices=["amazon", "json", "ragroll"])
     return args.parse_args()
 
 
@@ -211,6 +209,9 @@ if __name__ == "__main__":
 
     if args.catalog:
         sweep_config['parameters']['catalog']['value'] = args.catalog
+
+    if args.dataset:
+        sweep_config['parameters']['dataset']['value'] = args.dataset
 
     assert args.mode == sweep_config['parameters']['mode']['value']
 

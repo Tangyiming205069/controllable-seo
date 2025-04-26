@@ -1,0 +1,1 @@
+python -m experiment.main --mode=suffix --dataset=ragroll --catalog="air compressor"

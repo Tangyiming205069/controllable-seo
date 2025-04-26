@@ -1,30 +1,32 @@
 import transformers, torch, json
 from datasets import load_dataset
 
-def get_user_query(user_msg_type, catalog):
-    if catalog == "coffee_machines":
-        if user_msg_type == "default":
-            user_msg = "I am looking for a coffee machine. Can I get some recommendations from the following options?"
-        elif user_msg_type == "custom":
-            user_msg = "I am looking for an affordable coffee machine. Can I get some recommendations from the following products?"
-    elif catalog == "books":
-        if user_msg_type == "default":
-            user_msg = "I am looking for a book. Can I get some recommendations from the following options?"
-        elif user_msg_type == "custom":
-            user_msg = "I am looking for a good adventure novel. Can I get some recommendations from the following books?"
-    elif catalog == "cameras":
-        if user_msg_type == "default":
-            user_msg = "I am looking for a camera. Can I get some recommendations from the following options?"
-        elif user_msg_type == "custom":
-            user_msg = "I am looking for a high resolution camera. Can I get some recommendations from the following cameras?"
-    elif catalog == "election_articles":
-        if user_msg_type == "default":
-            user_msg = "I am looking for an article. Can I get some recommendations from the following articles?"
-    elif catalog.split('/')[0] == 'All_Beauty':
-        if user_msg_type == "default":
-            user_msg = "I am looking for a beauty product. Can I get some recommendations from the following options?"
-    else:
-        raise ValueError("Invalid catalog.")
+def get_user_query(catalog):
+    # if catalog == "coffee_machines":
+    #     if user_msg_type == "default":
+    #         user_msg = "I am looking for a coffee machine. Can I get some recommendations from the following options?"
+    #     elif user_msg_type == "custom":
+    #         user_msg = "I am looking for an affordable coffee machine. Can I get some recommendations from the following products?"
+    # elif catalog == "books":
+    #     if user_msg_type == "default":
+    #         user_msg = "I am looking for a book. Can I get some recommendations from the following options?"
+    #     elif user_msg_type == "custom":
+    #         user_msg = "I am looking for a good adventure novel. Can I get some recommendations from the following books?"
+    # elif catalog == "cameras":
+    #     if user_msg_type == "default":
+    #         user_msg = "I am looking for a camera. Can I get some recommendations from the following options?"
+    #     elif user_msg_type == "custom":
+    #         user_msg = "I am looking for a high resolution camera. Can I get some recommendations from the following cameras?"
+    # elif catalog == "election_articles":
+    #     if user_msg_type == "default":
+    #         user_msg = "I am looking for an article. Can I get some recommendations from the following articles?"
+    # elif catalog.split('/')[0] == 'All_Beauty':
+    #     if user_msg_type == "default":
+    #         user_msg = "I am looking for a beauty product. Can I get some recommendations from the following options?"
+    # else:
+    #     raise ValueError("Invalid catalog.")
+    
+    user_msg = f'I am looking for a {catalog}. Can I get some recommendations from the following products?'
     return user_msg
 
 

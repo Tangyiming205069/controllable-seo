@@ -52,7 +52,7 @@ parameters:
   random_order: 
     value: True 
   random_inference:
-    value: False
+    value: True
   target_product_idx: 
     values: [1,2,3,4,5,6,7,8] # [1,2,3,4,5,6,7,8,9,10]
 
@@ -60,4 +60,4 @@ parameters:
     value: "result/suffix/v1"
 
   comment:
-    value: "ragroll dataset with 8 instances and brand name only"
+    value: "main experiment"

@@ -9,12 +9,12 @@ parameters:
     value: 42
 
   model: 
-    values: [llama-3.1-8b, deepseek-7b, vicuna-7b, mistral-7b] # can be ignored if using args
+    values: [vicuna-7b, mistral-7b] # can be ignored if using args llama-3.1-8b, deepseek-7b, 
   mode:
     value: "suffix" # Choices: ["paraphrase", "suffix"]
 
   dataset:
-    value: "ragroll" # Choices: ["ragroll", "product"] # can be ignored if using args
+    value: "ragroll" # Choices: ["ragroll", "jsonl"] # can be ignored if using args
 
   batch_size: 
     value: 5

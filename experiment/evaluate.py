@@ -21,7 +21,7 @@ def calculate_average_rank(result_dir, model, catalog, random_inference, indices
     ranks = []
 
     for idx in indices:
-        file_path = f"{result_dir}/{model}/{catalog}/{idx}/random_inference={random_inference}.csv"
+        file_path = f"{result_dir}/{model}/ragroll/{catalog}/{idx}/random_inference={random_inference}.csv"
         if not os.path.exists(file_path):
             print(f"File not found: {file_path}")
             continue
@@ -48,11 +48,11 @@ def calculate_perplexity(text, model, tokenizer, device):
     perplexity = torch.exp(loss)
     return perplexity.item()
 
-def calculate_avg_perplexity(result_dir, model, catalog, random_inference, ppl_model, tokenizer, device, indices=[1,2,3,4,5,6,7,8,9,10]):
+def calculate_avg_perplexity(result_dir, model, catalog, random_inference, ppl_model, tokenizer, device, indices=[1,2,3,4,5,6,7,8]):
     perplexities = []
 
     for idx in indices:
-        file_path = f"{result_dir}/{model}/{catalog}/{idx}/random_inference={random_inference}.csv"
+        file_path = f"{result_dir}/{model}/ragroll/{catalog}/{idx}/random_inference={random_inference}.csv"
         if not os.path.exists(file_path):
             print(f"File not found: {file_path}")
             continue
@@ -106,11 +106,11 @@ def contains_bad_phrase(bad_word_set, bad_phrase_set, candidate):
     return 0
 
 
-def calculate_avg_bad_word_ratio(result_dir, model, catalog, random_inference, indices=[1,2,3,4,5,6,7,8,9,10]):
+def calculate_avg_bad_word_ratio(result_dir, model, catalog, random_inference, indices=[1,2,3,4,5,6,7,8]):
     bad_words_total = []
 
     for idx in indices:
-        file_path = f"{result_dir}/{model}/{catalog}/{idx}/random_inference={random_inference}.csv"
+        file_path = f"{result_dir}/{model}/ragroll/{catalog}/{idx}/random_inference={random_inference}.csv"
         if not os.path.exists(file_path):
             print(f"File not found: {file_path}")
             continue
@@ -134,55 +134,116 @@ def calculate_avg_bad_word_ratio(result_dir, model, catalog, random_inference, i
 
 
 if __name__ == "__main__":
-    import argparse
+    # import argparse
 
-    parser = argparse.ArgumentParser(description="Evaluate the results of the model.")
-    parser.add_argument('--job', type=str, choices=['bad_word', 'rank_perplexity'], help='Job to run: bad_word, rank, perplexity')
+    # parser = argparse.ArgumentParser(description="Evaluate the results of the model.")
+    # parser.add_argument('--job', type=str, choices=['bad_word', 'rank_perplexity'], help='Job to run: bad_word, rank, perplexity')
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
 
-
-    results = []
+    output_dir = 'metric'
+    os.makedirs(output_dir, exist_ok=True)
 
     result_dir = "result/suffix/v1"  # Adjust this to your actual results directory
 
     models = ['vicuna-7b', 'llama-3.1-8b', 'mistral-7b', 'deepseek-7b']
-    catalogs = ['books', 'coffee_machines', 'cameras']
+    # catalogs = ['books', 'coffee_machines', 'cameras']
+    product_list = [
+        "air compressor",
+        "air purifier",
+        "automatic garden watering system",
+        "barbecue grill",
+        "beard trimmer",
+        "blender",
+        "coffee maker",
+        "computer monitor",
+        "computer power supply",
+        "cordless drill",
+        "curling iron",
+        "dishwasher",
+        "electric sander",
+        "electric toothbrush",
+        "eyeshadow",
+        "fascia gun",
+        # "hair dryer",
+        # "hair straightener",
+        "hammock",
+        "hedge trimmer",
+        "laptop",
+        "laser measure",
+        "lawn mower",
+        "leaf blower",
+        "lipstick",
+        "microwave oven",
+        "network attached storage",
+        "noise-canceling headphone",
+        "paint sprayer",
+        "pool cleaner",
+        "portable air conditioner",
+        "portable speaker",
+        "pressure washer",
+        "robot vacuum",
+        "screw driver",
+        "shampoo",
+        "skin cleansing brush",
+        "sleeping bag",
+        "slow cooker",
+        "smartphone",
+        "solid state drive",
+        "space heater",
+        "string trimmer",
+        "tablet",
+        "tent",
+        "tool chest",
+        "washing machine",
+        "wet-dry vacuum",
+        "wifi router",
+        "wood router"
+    ]
 
-    if args.job == 'rank_perplexity':
-        device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # Load model and tokenizer (GPT-2) for calculating perplexity
-        perplexity_model, perplexity_tokenizer = get_model("lmsys/vicuna-7b-v1.5", 16, device)
+    # if args.job == 'rank_perplexity':
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    for model in models:
-        for catalog in catalogs:
-            for random_inference in [True, False]:
-                if args.job == 'rank_perplexity':
-                    avg_rank, std_rank = calculate_average_rank(result_dir, model, catalog, random_inference)
-                    avg_perplexity, std_perplexity = calculate_avg_perplexity(result_dir, model, catalog, random_inference, perplexity_model, perplexity_tokenizer, device)
-                    if avg_rank is not None:
-                        results.append({
-                            "Model": model,
-                            "Catalog": catalog,
-                            "Random Inference": random_inference,
-                            "Average Rank": f'{round(avg_rank, 2)}±{round(std_rank, 2)}', 
-                            "Average Perplexity": f'{round(avg_perplexity, 2)}±{round(std_perplexity, 2)}'
-                        })
-                elif args.job == 'bad_word':
-                    avg_bad_word_ratio, std_bad_word_ratio = calculate_avg_bad_word_ratio(result_dir, model, catalog, random_inference)
-                    if avg_bad_word_ratio is not None:
-                        results.append({
-                            "Model": model,
-                            "Catalog": catalog,
-                            "Random Inference": random_inference,
-                            "Average Bad Word Ratio": f'{round(avg_bad_word_ratio, 2)}±{round(std_bad_word_ratio, 2)}'
-                        })
-                else:
-                    raise ValueError("Invalid job type. Choose 'bad_word' or 'rank_perplexity'.")
+    # Load model and tokenizer (GPT-2) for calculating perplexity
+    perplexity_model, perplexity_tokenizer = get_model("lmsys/vicuna-7b-v1.5", 16, device)
+
+    for catalog in product_list:
+        results = []
+        if os.path.exists(f"{output_dir}/{catalog}.csv"):
+            continue
+
+        for model in models:
+            for random_inference in [True]:
+                avg_rank, std_rank = calculate_average_rank(result_dir, model, catalog, random_inference, indices=[1,2,3,4,5,6,7,8])
+                avg_perplexity, std_perplexity = calculate_avg_perplexity(result_dir, model, catalog, random_inference, perplexity_model, perplexity_tokenizer, device, indices=[1,2,3,4,5,6,7,8])
+                avg_bad_word_ratio, std_bad_word_ratio = calculate_avg_bad_word_ratio(result_dir, model, catalog, random_inference, indices=[1,2,3,4,5,6,7,8])
+                if avg_rank is None:
+                    print(f"Rank calculation failed for {model}, {catalog}, random_inference={random_inference}")
+                    continue
+
+                if avg_perplexity is None:
+                    print(f"Perplexity calculation failed for {model}, {catalog}, random_inference={random_inference}")
+                    continue
+
+                if avg_bad_word_ratio is None:
+                    print(f"Bad word ratio calculation failed for {model}, {catalog}, random_inference={random_inference}")
+                    continue
+
+                results.append({
+                    "Model": model,
+                    "Catalog": catalog,
+                    "Average Rank": f'{round(avg_rank, 2)}±{round(std_rank, 2)}', 
+                    "Average Perplexity": f'{round(avg_perplexity, 2)}±{round(std_perplexity, 2)}',
+                    "Average Bad Word Ratio": f'{round(avg_bad_word_ratio, 2)}±{round(std_bad_word_ratio, 2)}'
+                })
                 
-    # Convert results to DataFrame and print nicely formatted table
-    df_results = pd.DataFrame(results)
-    print(tabulate(df_results, headers='keys', tablefmt='grid'))
+        # Convert results to DataFrame and print nicely formatted table
+        df_results = pd.DataFrame(results)
+        print(tabulate(df_results, headers='keys', tablefmt='grid'))
+
+        save_path = f"{output_dir}/{catalog}.csv"
+        df_results.to_csv(save_path, index=False)
+        print(f"✅ Saved to {save_path}")
 

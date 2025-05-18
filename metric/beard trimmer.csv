@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,beard trimmer,1.88±1.81,111.05±42.56,0.62±0.52
+llama-3.1-8b,beard trimmer,1.5±0.93,93.89±36.4,0.88±0.35
+mistral-7b,beard trimmer,1.0±0.0,91.58±44.07,0.0±0.0
+deepseek-7b,beard trimmer,1.38±0.74,60.37±42.73,0.25±0.46

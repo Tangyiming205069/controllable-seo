@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,air purifier,2.12±2.23,93.55±104.68,0.12±0.35
+llama-3.1-8b,air purifier,1.0±0.0,71.07±28.37,0.5±0.53
+mistral-7b,air purifier,1.75±1.75,75.21±47.76,0.25±0.46
+deepseek-7b,air purifier,1.5±1.07,61.19±39.1,0.25±0.46

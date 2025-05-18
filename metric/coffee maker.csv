@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,coffee maker,3.5±2.73,118.53±58.47,0.38±0.52
+llama-3.1-8b,coffee maker,1.75±2.12,90.27±45.86,0.88±0.35
+mistral-7b,coffee maker,1.62±1.77,97.74±78.97,0.25±0.46
+deepseek-7b,coffee maker,1.0±0.0,47.96±27.72,0.25±0.46

@@ -1,6 +1,6 @@
 import torch, os, wandb, yaml, random
 import numpy as np
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import argparse
 

@@ -9,7 +9,7 @@ parameters:
     value: 42
 
   model: 
-    values: [vicuna-7b, mistral-7b] # can be ignored if using args llama-3.1-8b, deepseek-7b, 
+    value: llama-3.1-8b # [llama-3.1-8b, deepseek-7b, vicuna-7b, mistral-7b] # can be ignored if using args 
   mode:
     value: "suffix" # Choices: ["paraphrase", "suffix"]
 
@@ -54,7 +54,7 @@ parameters:
   random_inference:
     value: True
   target_product_idx: 
-    values: [1,2,3,4,5,6,7,8] # [1,2,3,4,5,6,7,8,9,10]
+    values: [8] # [1,2,3,4,5,6,7,8,9,10]
 
   result_dir:
     value: "result/suffix/v1"

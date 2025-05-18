@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,dishwasher,2.12±2.1,55.58±35.3,0.0±0.0
+llama-3.1-8b,dishwasher,1.38±0.74,90.66±15.9,0.38±0.52
+mistral-7b,dishwasher,1.0±0.0,75.26±41.25,0.0±0.0
+deepseek-7b,dishwasher,1.88±2.47,58.74±32.89,0.25±0.46

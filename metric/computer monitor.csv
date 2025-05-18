@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,computer monitor,2.12±2.8,36.99±24.03,0.0±0.0
+llama-3.1-8b,computer monitor,2.12±2.8,53.41±15.81,0.62±0.52
+mistral-7b,computer monitor,2.62±2.92,78.75±70.44,0.12±0.35
+deepseek-7b,computer monitor,2.5±2.98,57.4±25.23,0.38±0.52

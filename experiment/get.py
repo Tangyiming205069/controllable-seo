@@ -1,5 +1,4 @@
 import transformers, torch, json
-from datasets import load_dataset
 
 def get_user_query(catalog):
     # if catalog == "coffee_machines":

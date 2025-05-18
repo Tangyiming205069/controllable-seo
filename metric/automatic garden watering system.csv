@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,automatic garden watering system,2.5±2.83,155.92±184.9,0.25±0.46
+llama-3.1-8b,automatic garden watering system,1.0±0.0,103.58±57.07,0.62±0.52
+mistral-7b,automatic garden watering system,1.0±0.0,147.71±49.43,0.0±0.0
+deepseek-7b,automatic garden watering system,2.0±1.6,63.82±45.94,0.25±0.46

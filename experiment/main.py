@@ -10,8 +10,7 @@ from experiment.attack import attack_control
 
 
 
-
-ENTITY = 'fanyieee-university-of-southern-california'
+ENTITY = ''
 PROJECT = 'seo'
 
 ASSSISTANT_PROMPT = "You are a recommendation AI designed to assist users in selecting the best products based on their preferences and needs. Provide a numbered list of product recommendations ranked according to the user's request."

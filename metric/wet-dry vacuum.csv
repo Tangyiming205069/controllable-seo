@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,wet-dry vacuum,1.12±0.35,46.22±36.36,0.0±0.0
+llama-3.1-8b,wet-dry vacuum,1.5±1.41,58.54±15.04,0.38±0.52
+mistral-7b,wet-dry vacuum,1.25±0.71,80.31±62.74,0.38±0.52
+deepseek-7b,wet-dry vacuum,2.38±1.41,36.44±17.35,0.38±0.52

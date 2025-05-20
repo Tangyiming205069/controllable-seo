@@ -6,6 +6,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from experiment.get import get_model
 import nltk
 import re
+import math
 nltk.download('punkt_tab')
 
 BAD_WORDS = {"first", "top", "recommendation", "priority", "rank", "prioritize", "recommend"}
@@ -63,7 +64,9 @@ def calculate_avg_perplexity(result_dir, model, catalog, random_inference, ppl_m
 
         current_perplexities = []
         for attack in filtered_df['attack_prompt']:
+            import pdb; pdb.set_trace()
             attack_prompt = attack.lstrip('<span style="color:red;">').rstrip('</span>')
+            
             current_perplexities.append(calculate_perplexity(attack_prompt, ppl_model, tokenizer, device))
 
         min_perplexity = min(current_perplexities)
@@ -72,7 +75,10 @@ def calculate_avg_perplexity(result_dir, model, catalog, random_inference, ppl_m
 
     assert len(perplexities) > 0, f"No results found for {model}, {catalog}, random_inference={random_inference}"
 
+    perplexities = [p for p in perplexities if not math.isnan(p)]
+
     average_perplexity = sum(perplexities) / len(perplexities)
+    
     std = statistics.stdev(perplexities)
     
     return average_perplexity, std
@@ -150,49 +156,49 @@ if __name__ == "__main__":
     models = ['vicuna-7b', 'llama-3.1-8b', 'mistral-7b', 'deepseek-7b']
     # catalogs = ['books', 'coffee_machines', 'cameras']
     product_list = [
-        "air compressor",
-        "air purifier",
-        "automatic garden watering system",
-        "barbecue grill",
-        "beard trimmer",
-        "blender",
-        "coffee maker",
-        "computer monitor",
-        "computer power supply",
-        "cordless drill",
-        "curling iron",
-        "dishwasher",
-        "electric sander",
-        "electric toothbrush",
-        "eyeshadow",
-        "fascia gun",
+        # "air compressor",
+        # "air purifier",
+        # "automatic garden watering system",
+        # "barbecue grill",
+        # "beard trimmer",
+        # "blender",
+        # "coffee maker",
+        # "computer monitor",
+        # "computer power supply",
+        # "cordless drill",
+        # "curling iron",
+        # "dishwasher",
+        # "electric sander",
+        # "electric toothbrush",
+        # "eyeshadow",
+        # "fascia gun",
         # "hair dryer",
         # "hair straightener",
-        "hammock",
-        "hedge trimmer",
-        "laptop",
-        "laser measure",
-        "lawn mower",
-        "leaf blower",
-        "lipstick",
-        "microwave oven",
-        "network attached storage",
-        "noise-canceling headphone",
-        "paint sprayer",
-        "pool cleaner",
-        "portable air conditioner",
-        "portable speaker",
-        "pressure washer",
-        "robot vacuum",
-        "screw driver",
-        "shampoo",
-        "skin cleansing brush",
-        "sleeping bag",
-        "slow cooker",
-        "smartphone",
-        "solid state drive",
-        "space heater",
-        "string trimmer",
+        # "hammock",
+        # "hedge trimmer",
+        # "laptop",
+        # "laser measure",
+        # "lawn mower",
+        # "leaf blower",
+        # "lipstick",
+        # "microwave oven",
+        # "network attached storage",
+        # "noise-canceling headphone",
+        # "paint sprayer",
+        # "pool cleaner",
+        # "portable air conditioner",
+        # "portable speaker",
+        # "pressure washer",
+        # "robot vacuum",
+        # "screw driver",
+        # "shampoo",
+        # "skin cleansing brush",
+        # "sleeping bag",
+        # "slow cooker",
+        # "smartphone",
+        # "solid state drive",
+        # "space heater",
+        # "string trimmer",
         "tablet",
         "tent",
         "tool chest",
@@ -211,8 +217,8 @@ if __name__ == "__main__":
 
     for catalog in product_list:
         results = []
-        if os.path.exists(f"{output_dir}/{catalog}.csv"):
-            continue
+        # if os.path.exists(f"{output_dir}/{catalog}.csv"):
+        #     continue
 
         for model in models:
             for random_inference in [True]:

@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,noise-canceling headphone,2.75±3.06,97.63±95.78,0.12±0.35
+llama-3.1-8b,noise-canceling headphone,4.12±3.44,65.12±19.86,0.62±0.52
+mistral-7b,noise-canceling headphone,3.25±2.66,94.4±65.18,0.0±0.0
+deepseek-7b,noise-canceling headphone,3.38±2.88,47.18±45.16,0.38±0.52

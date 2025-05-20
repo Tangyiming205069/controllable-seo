@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,string trimmer,2.5±2.14,125.19±104.25,0.25±0.46
+llama-3.1-8b,string trimmer,1.12±0.35,110.69±58.32,0.12±0.35
+mistral-7b,string trimmer,1.0±0.0,85.11±94.5,0.12±0.35
+deepseek-7b,string trimmer,2.25±1.75,50.2±20.73,0.25±0.46

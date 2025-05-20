@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,laser measure,2.88±3.23,244.23±407.0,0.12±0.35
+llama-3.1-8b,laser measure,2.38±2.88,82.57±40.91,0.62±0.52
+mistral-7b,laser measure,2.12±2.8,94.9±77.22,0.25±0.46
+deepseek-7b,laser measure,2.88±3.04,58.8±22.4,0.38±0.52

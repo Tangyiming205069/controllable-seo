@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,slow cooker,1.38±0.74,89.3±44.66,0.0±0.0
+llama-3.1-8b,slow cooker,2.25±1.83,70.65±46.19,0.12±0.35
+mistral-7b,slow cooker,1.62±1.06,94.63±45.69,0.0±0.0
+deepseek-7b,slow cooker,1.62±1.41,42.77±23.49,0.25±0.46

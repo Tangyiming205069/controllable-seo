@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,portable speaker,1.71±1.25,155.69±292.34,0.0±0.0
+llama-3.1-8b,portable speaker,1.86±2.27,73.06±16.66,0.57±0.53
+mistral-7b,portable speaker,1.29±0.49,100.29±50.12,0.14±0.38
+deepseek-7b,portable speaker,1.14±0.38,61.43±34.46,0.29±0.49

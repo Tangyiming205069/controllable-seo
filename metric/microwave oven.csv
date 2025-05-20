@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,microwave oven,3.5±2.93,135.05±88.03,0.12±0.35
+llama-3.1-8b,microwave oven,2.25±2.82,106.83±53.61,0.5±0.53
+mistral-7b,microwave oven,2.25±2.76,129.03±69.5,0.25±0.46
+deepseek-7b,microwave oven,2.38±2.77,68.85±45.97,0.12±0.35

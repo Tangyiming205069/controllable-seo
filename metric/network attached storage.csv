@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,network attached storage,2.5±2.51,43.18±30.48,0.25±0.46
+llama-3.1-8b,network attached storage,1.12±0.35,94.74±31.73,0.5±0.53
+mistral-7b,network attached storage,1.75±1.39,82.92±104.38,0.0±0.0
+deepseek-7b,network attached storage,2.62±2.83,53.25±30.9,0.38±0.52

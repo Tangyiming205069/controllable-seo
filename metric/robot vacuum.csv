@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,robot vacuum,3.25±3.62,76.92±68.98,0.38±0.52
+llama-3.1-8b,robot vacuum,3.62±3.74,82.59±23.57,0.5±0.53
+mistral-7b,robot vacuum,2.25±2.82,110.21±47.85,0.0±0.0
+deepseek-7b,robot vacuum,2.38±2.0,57.12±34.95,0.25±0.46

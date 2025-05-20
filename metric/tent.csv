@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,tent,2.75±2.96,121.16±87.06,0.25±0.46
+llama-3.1-8b,tent,1.25±0.46,94.0±47.25,0.25±0.46
+mistral-7b,tent,1.25±0.46,174.32±171.53,0.0±0.0
+deepseek-7b,tent,1.25±0.46,75.23±34.13,0.5±0.53

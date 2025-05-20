@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,wood router,1.75±1.16,91.4±51.8,0.12±0.35
+llama-3.1-8b,wood router,1.12±0.35,90.74±56.13,0.5±0.53
+mistral-7b,wood router,1.38±0.74,95.46±64.14,0.0±0.0
+deepseek-7b,wood router,1.38±0.52,41.4±16.58,0.38±0.52

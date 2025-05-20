@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,lipstick,2.38±1.85,67.31±46.06,0.25±0.46
+llama-3.1-8b,lipstick,2.0±1.77,88.23±28.02,0.5±0.53
+mistral-7b,lipstick,1.12±0.35,114.56±68.23,0.12±0.35
+deepseek-7b,lipstick,1.75±1.49,61.03±37.48,0.12±0.35

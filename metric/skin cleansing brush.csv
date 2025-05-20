@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,skin cleansing brush,1.5±1.41,141.33±109.24,0.12±0.35
+llama-3.1-8b,skin cleansing brush,2.75±2.55,74.65±33.91,0.25±0.46
+mistral-7b,skin cleansing brush,1.75±1.49,64.37±27.83,0.38±0.52
+deepseek-7b,skin cleansing brush,3.12±2.75,58.16±36.43,0.12±0.35

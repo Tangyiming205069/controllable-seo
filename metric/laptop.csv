@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,laptop,2.25±1.75,138.7±317.37,0.12±0.35
+llama-3.1-8b,laptop,1.0±0.0,81.63±26.2,0.62±0.52
+mistral-7b,laptop,1.0±0.0,60.85±43.51,0.25±0.46
+deepseek-7b,laptop,1.25±0.46,32.06±17.76,0.25±0.46

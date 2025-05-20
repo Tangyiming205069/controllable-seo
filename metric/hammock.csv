@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,hammock,2.5±2.83,57.42±57.78,0.38±0.52
+llama-3.1-8b,hammock,3.5±3.12,76.27±36.86,0.5±0.53
+mistral-7b,hammock,2.12±2.8,107.39±64.72,0.12±0.35
+deepseek-7b,hammock,2.5±2.83,84.92±30.24,0.38±0.52

@@ -5,3 +5,4 @@ wandb/
 slurm*
 result/suffix/v2
 result/suffix/v3
+transfer/

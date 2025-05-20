@@ -1,0 +1,5 @@
+Model,Catalog,Average Rank,Average Perplexity,Average Bad Word Ratio
+vicuna-7b,pool cleaner,2.62±1.85,73.46±64.04,0.0±0.0
+llama-3.1-8b,pool cleaner,1.62±1.41,112.58±56.85,0.38±0.52
+mistral-7b,pool cleaner,1.62±1.77,142.34±88.95,0.0±0.0
+deepseek-7b,pool cleaner,1.38±1.06,85.53±51.66,0.62±0.52
